@@ -12,7 +12,7 @@
 | Esfuerzo estimado | ~3 horas (orientativo; si te pasas, se explica en el README dónde se fue el tiempo) |
 | Plazo | 7 días desde la recepción |
 | Entregable | 2 servicios desplegados y públicos (frontend + backend), cada uno con su URL, y el repositorio |
-| Contacto | Andy Nadal, CTO |
+| Contacto | CTO de RUUT (datos en el enunciado, que no se publica) |
 
 ### Requisitos fijos (no negociables)
 
@@ -71,7 +71,7 @@
 |---|---|---|
 | Lenguaje | **TypeScript** en todo el repo | Preferencia del evaluador; tipos compartidos entre front y back |
 | Monorepo | **pnpm workspaces** | Un solo repo, un paquete `shared` con tipos y esquemas Zod |
-| Frontend | **Next.js 15 (App Router)** + React | Preferido por el evaluador; los Route Handlers nos sirven de BFF (ver Auth) |
+| Frontend | **Next.js 16 (App Router)** + React 19 | Preferido por el evaluador (16 es la versión estable actual); los Route Handlers nos sirven de BFF (ver Auth) |
 | UI | **Tailwind CSS** + **shadcn/ui** | Velocidad y consistencia visual sin diseñar componentes desde cero |
 | Gráficos | **TradingView Lightweight Charts** | Hecho para series financieras (velas, líneas, áreas), ligero, licencia Apache 2.0 |
 | Data fetching (cliente) | **TanStack Query** | Caché en cliente, reintentos, estados de loading y error |
@@ -107,14 +107,16 @@ Navegador ──cookie httpOnly──▶ Next.js (Route Handlers /api/*) ──A
 | Dato | Endpoint Twelve Data | TTL de caché |
 |---|---|---|
 | Búsqueda de símbolos | `/symbol_search` | 24 h |
-| Quote | `/quote` (en lote: `symbol=AAPL,MSFT,...`) | 60 s |
-| Serie intradía (1D) | `/time_series?interval=5min` | 5 min |
+| Quote | `/quote` (en lote: `symbol=AAPL,MSFT,...`) | 2 min con el mercado abierto, 15 min cerrado |
+| Serie 1D | `/time_series?interval=5min` | 5 min |
+| Serie 1W | `/time_series?interval=30min` | 15 min |
 | Serie diaria (1M o más) | `/time_series?interval=1day` | 1 h |
 
-- **Debounce de 300 ms** en la búsqueda del frontend y longitud mínima de 1 a 2 caracteres.
+- **Debounce de 300 ms** en la búsqueda del frontend, desde 1 carácter.
 - **Deduplicación de requests en vuelo:** si dos usuarios piden `AAPL` a la vez, sale una sola llamada.
 - **Quotes en lote** para la watchlist (ojo: el coste sigue siendo por símbolo).
-- **Stale-while-error:** si Twelve Data responde con límite alcanzado (HTTP 429 o `code: 429` en el body), servimos el último valor en caché con `stale: true` y devolvemos `429` + `Retry-After` solo si no hay nada en caché.
+- **Presupuesto de créditos con reserva parcial:** en un lote se piden al proveedor solo los símbolos que caben en el minuto; el resto se sirve desde caché con `stale: true` y la respuesta lleva `meta.partial` y `retryAfter`.
+- **Stale-while-error:** si Twelve Data responde con límite alcanzado (HTTP 429 o `code: 429` en el body), servimos el último valor en caché con `stale: true`. Solo devolvemos `429` con `Retry-After` si ningún dato pedido tiene nada en caché. Detalle completo en el spec 02 §4 y §5.
 - Error normalizado hacia el frontend: `{ error: { code: "RATE_LIMITED" | "NOT_FOUND" | "UPSTREAM_ERROR" | ..., message, retryAfter? } }`.
 
 ---
@@ -142,6 +144,7 @@ ruut-stocks/
 │   │   │   │   └── twelve-data/      # cliente HTTP, mapeo de tipos, errores
 │   │   │   ├── lib/
 │   │   │   │   ├── cache.ts          # LRU + TTL + dedupe en vuelo
+│   │   │   │   ├── credit-budget.ts  # créditos de Twelve Data por minuto y por día
 │   │   │   │   ├── jwt.ts
 │   │   │   │   ├── logger.ts
 │   │   │   │   └── prisma.ts
@@ -165,22 +168,20 @@ ruut-stocks/
 │       │   │   │   ├── layout.tsx    # layout protegido (redirige si no hay sesión)
 │       │   │   │   ├── page.tsx      # dashboard / watchlist
 │       │   │   │   └── stocks/[symbol]/page.tsx
-│       │   │   ├── api/              # BFF: reenvía a Express con el JWT de la cookie
-│       │   │   │   ├── auth/[action]/route.ts
-│       │   │   │   └── [...proxy]/route.ts
+│       │   │   ├── api/              # BFF: Route Handlers (spec 03 §3)
+│       │   │   │   ├── auth/         # login, register, demo, logout, expired (un route.ts cada uno)
+│       │   │   │   └── bff/[...path]/route.ts   # pasarela con lista blanca hacia Express
 │       │   │   ├── layout.tsx
 │       │   │   └── globals.css
-│       │   ├── components/
-│       │   │   ├── ui/               # shadcn/ui
-│       │   │   ├── charts/           # PriceChart, Sparkline
-│       │   │   ├── search/           # SymbolSearch (con debounce)
-│       │   │   └── watchlist/
+│       │   ├── components/           # lista plana en kebab-case (spec 03 §6)
+│       │   │   └── ui/               # shadcn/ui
 │       │   ├── hooks/                # useDebounce, useQuote, useSeries...
 │       │   ├── lib/
-│       │   │   ├── api-client.ts     # fetch tipado hacia el BFF
+│       │   │   ├── api-client.ts     # fetch tipado hacia la pasarela (cliente)
+│       │   │   ├── api-server.ts     # llamadas al API desde Server Components (server-only)
 │       │   │   ├── session.ts        # lectura y escritura de la cookie
 │       │   │   └── format.ts         # moneda, %, fechas
-│       │   └── middleware.ts         # protección de rutas en el edge
+│       │   └── proxy.ts              # protección de rutas (Next 16, antes middleware.ts)
 │       ├── public/
 │       ├── railway.json
 │       ├── next.config.ts
@@ -213,14 +214,16 @@ ruut-stocks/
 ├── docs/
 │   ├── ui-ux-conventions.md          # fuente de verdad visual
 │   └── audits/                       # informes del agente auditor
-├── .env.example
-├── .gitignore
+├── .editorconfig / .nvmrc / .prettierrc.json / .prettierignore
+├── .gitignore / .gitattributes
 ├── CLAUDE.md                         # reglas del proyecto para la IA
 ├── PLAN.md                           # este documento
 ├── README.md
+├── compose.yaml                      # Postgres local para desarrollo
+├── eslint.config.js                  # flat config compartida
 ├── package.json                      # scripts raíz (dev, build, lint, test)
 ├── pnpm-workspace.yaml
-└── tsconfig.base.json
+└── tsconfig.base.json                # (cada app tiene su propio .env.example)
 ```
 
 ### Modelo de datos (Prisma)
@@ -238,6 +241,7 @@ model WatchlistItem {
   id        String   @id @default(cuid())
   userId    String
   symbol    String
+  name      String
   exchange  String?
   addedAt   DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -271,14 +275,15 @@ model WatchlistItem {
 
 **Objetivo:** tener claro qué se construye antes de pedírselo a la IA (spec first).
 
-- [ ] Confirmar los límites actuales de Twelve Data en su página de precios y obtener la API key.
-- [ ] Escribir `prompts/specs/01-product.md` (usuario, features del MVP, lo que queda fuera).
-- [ ] Escribir `prompts/specs/02-backend.md` (endpoints, modelo de datos, caché, errores).
-- [ ] Escribir `prompts/specs/03-frontend.md` (pantallas, flujos, estados).
+- [x] Confirmar los límites actuales de Twelve Data (8 créditos/min y 800/día, verificado el 2026-11-21) y de Railway.
+- [ ] Obtener la API key de Twelve Data (la crea el autor; va en `apps/api/.env`, nunca en el repo).
+- [x] Escribir `prompts/specs/01-product.md` (usuario, features del MVP, lo que queda fuera).
+- [x] Escribir `prompts/specs/02-backend.md` (endpoints, modelo de datos, caché, errores).
+- [x] Escribir `prompts/specs/03-frontend.md` (pantallas, flujos, estados).
 - [x] Crear `CLAUDE.md` con las reglas del proyecto (idioma, commits, tests, registro de prompts) e indexarlo en `prompts/system/`.
 - [x] Definir los agentes en `.claude/agents/` y las convenciones de UI/UX con su mockup público.
 - [x] Inicializar git con `.gitignore` y la estructura de `prompts/`.
-- [ ] Inicializar el monorepo pnpm, `tsconfig.base.json`, ESLint/Prettier y `.env.example`.
+- [x] Inicializar el monorepo pnpm, `tsconfig.base.json`, ESLint/Prettier, `.env.example` por app y Postgres local con Docker Compose.
 
 **Hecho cuando:** los specs están escritos y `pnpm install` funciona en un repo vacío pero estructurado.
 
@@ -304,7 +309,8 @@ model WatchlistItem {
 - [ ] `lib/cache.ts`: LRU con TTL por clave, dedupe de requests en vuelo y fallback a dato obsoleto.
 - [ ] Endpoints `/market/search`, `/market/quote` y `/market/series/:symbol`.
 - [ ] CRUD de `/watchlist` que devuelve los quotes en lote.
-- [ ] `express-rate-limit` por usuario o IP.
+- [ ] `lib/credit-budget.ts` con reserva parcial en lotes (spec 02 §5).
+- [ ] `express-rate-limit` por `userId` y, en el login, por email (detrás del BFF, la IP es siempre la del servidor de Next).
 - [ ] Tests del adaptador con respuestas mockeadas (éxito, 429, símbolo inexistente).
 
 **Hecho cuando:** dos llamadas seguidas al mismo quote solo consumen un crédito y un 429 simulado devuelve el dato en caché con `stale: true`.
@@ -314,8 +320,8 @@ model WatchlistItem {
 **Objetivo:** el usuario puede registrarse, entrar y ver un layout protegido.
 
 - [ ] Next.js con Tailwind y shadcn/ui.
-- [ ] Route Handlers BFF: login, registro y logout (escriben y borran la cookie httpOnly) y un proxy genérico hacia Express.
-- [ ] `middleware.ts` que redirige a `/login` si no hay sesión.
+- [ ] Route Handlers BFF: login, registro, demo, logout y expired (escriben y borran la cookie httpOnly) y la pasarela `/api/bff/[...path]` con lista blanca hacia Express.
+- [ ] `proxy.ts` que redirige a `/login` si no hay sesión.
 - [ ] Pantallas de login y registro con validación (Zod de `shared`) y errores claros.
 - [ ] Layout con cabecera, buscador y menú de usuario.
 
@@ -325,7 +331,7 @@ model WatchlistItem {
 
 **Objetivo:** la experiencia principal, pulida.
 
-- [ ] `SymbolSearch` con debounce de 300 ms, navegación con teclado y resultados agrupados por exchange.
+- [ ] `SymbolSearch` con debounce de 300 ms y navegación con teclado.
 - [ ] Dashboard con la watchlist: precio, variación coloreada, sparkline, añadir y quitar.
 - [ ] Página `/stocks/[symbol]`: gráfico con Lightweight Charts, selector de rango y tarjetas de métricas.
 - [ ] Estados de loading (skeletons), vacío ("añade tu primera acción") y error.
@@ -364,7 +370,13 @@ model WatchlistItem {
 - **Despliegue automático** desde GitHub en cada push a `main`.
 - Servidores Node de larga vida (no serverless), ideal para la caché en memoria del backend.
 
-> ⚠️ **Verificar el plan gratuito antes de empezar.** Railway ya no ofrece un tier gratuito ilimitado: da un periodo de prueba con crédito y después un plan Free con crédito mensual muy limitado, o el Hobby de pago. Hay que confirmar en la página de precios que los 3 servicios caben en el crédito disponible hasta después de la entrevista, y anotarlo en el README como trade-off. Si no alcanzara, el plan B es **web en Vercel + api en Railway + Supabase** como base de datos, sin cambios de código (solo variables de entorno).
+> ⚠️ **Plan de Railway (verificado el 2026-11-21 en docs.railway.com/pricing):** cuenta nueva con 30 días de prueba y 5 USD de crédito único; después, plan Free con 1 USD al mes, servicios que se duermen sin tráfico y sin dominios propios; Hobby cuesta 5 USD al mes con 5 USD de uso incluidos.
+>
+> Implicaciones:
+> - Tres servicios (web, api y Postgres) no caben en 1 USD al mes.
+> - **Desplegar lo más tarde posible** dentro de los 7 días, para que el periodo de prueba cubra la entrega y la entrevista.
+> - Si la entrevista cae fuera de la prueba, pasar a Hobby (5 USD) o aplicar el plan B: **web en Vercel + api en Railway + Supabase** como base de datos, sin cambios de código (solo variables de entorno).
+> - Anotarlo en el README como trade-off.
 
 ### Topología
 
@@ -424,8 +436,15 @@ Railway project: ruut-stocks
 | api | `CORS_ORIGIN` | `https://${{web.RAILWAY_PUBLIC_DOMAIN}}` |
 | api | `PORT` | la inyecta Railway (escuchar en `0.0.0.0`) |
 | web | `API_INTERNAL_URL` | `http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}` |
-| web | `NEXT_PUBLIC_API_URL` | `https://${{api.RAILWAY_PUBLIC_DOMAIN}}` (solo informativo y para el README) |
+| api | `NODE_ENV` / `LOG_LEVEL` | `production` / `info` |
+| api | `TWELVE_DATA_BASE_URL` | opcional, por defecto `https://api.twelvedata.com` |
+| api | `TWELVE_DATA_CREDITS_PER_MINUTE` / `_PER_DAY` | opcionales, por defecto `8` / `800` |
+| api | `TWELVE_DATA_DELAY_MINUTES` | opcional, por defecto `0` |
+| api | `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | solo para el seed; el servidor arranca sin ellas |
+| web | `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | iguales a las del api (solo en el servidor) |
 | web | `SESSION_COOKIE_NAME` | `ruut_session` |
+
+La lista completa, con obligatoriedad y valores por defecto, está en el spec 02 §7 y en el spec 03 §8.
 
 ### Pasos de despliegue
 
@@ -442,9 +461,10 @@ Railway project: ruut-stocks
 
 | Riesgo | Mitigación |
 |---|---|
-| Agotar los 800 créditos/día durante la revisión | Caché con TTL, quotes en lote, dedupe, fallback a dato obsoleto y watchlist del usuario demo limitada a unos 5 símbolos |
-| Rate limit por minuto (8/min) al cargar la watchlist | Un solo request en lote para los quotes; sparklines con datos diarios cacheados durante 1 h |
-| Crédito de Railway insuficiente | Verificarlo en la Fase 0; plan B con Vercel y Supabase |
+| Agotar los 800 créditos/día durante la revisión | Caché con TTL (quote: 2 min con el mercado abierto y 15 min cerrado), refresco solo con el mercado abierto, dedupe, fallback a dato obsoleto, demo con 5 símbolos y máximo de 8 por usuario |
+| Rate limit por minuto (8/min) al cargar la watchlist | Reserva parcial de créditos en lotes; sparklines cacheadas 1 h y sin banner si fallan por límite |
+| Crédito de Railway insuficiente | Verificado: la prueba dura 30 días con 5 USD. Desplegar tarde y, si no alcanza, Hobby o plan B (Vercel y Supabase) |
+| Una watchlist de 5 símbolos en frío cuesta 10 créditos (quotes más sparklines), por encima de 8/min | Presupuesto de créditos en el backend, quotes antes que sparklines y sparklines escalonadas (spec 02 §5) |
 | La caché en memoria se pierde en cada redeploy | Aceptable para el MVP; con más tiempo, mover la caché a Postgres o Redis |
 | Cookies entre dominios | Patrón BFF: la cookie vive solo en el dominio de Next |
 | Pasarse de las 3 h | Extras solo después de cerrar la Fase 5; registrar el tiempo real por fase para el README |

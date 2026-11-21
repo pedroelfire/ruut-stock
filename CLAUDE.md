@@ -16,7 +16,8 @@ App de datos y visualización de acciones (prueba técnica RUUT). El plan comple
 
 ## Contexto fijo
 
-- Monorepo pnpm: `apps/web` (Next.js 15, App Router), `apps/api` (Express 5), `packages/shared` (tipos y esquemas Zod).
+- Specs de referencia: [producto](prompts/specs/01-product.md), [backend](prompts/specs/02-backend.md) y [frontend](prompts/specs/03-frontend.md). Si el código y un spec no coinciden, se actualiza primero el spec.
+- Monorepo pnpm: `apps/web` (Next.js 16, App Router), `apps/api` (Express 5), `packages/shared` (tipos y esquemas Zod).
 - Los datos de mercado vienen de Twelve Data **solo a través de `apps/api`**. El navegador nunca llama a Twelve Data.
 - Auth: Express emite el JWT. Next.js lo guarda en una cookie httpOnly y lo reenvía como `Authorization: Bearer` (patrón BFF).
 - Hosting: Railway (servicios `web`, `api` y `Postgres`).
@@ -47,7 +48,7 @@ Los subagentes no pueden lanzar otros subagentes: la orquestación siempre la ha
 - TypeScript `strict`. Prohibido `any` (usar `unknown` y estrechar). Nada de `@ts-ignore` sin un comentario que lo justifique.
 - Validación con Zod en todas las fronteras: body/query/params en Express, respuestas de Twelve Data, variables de entorno, formularios.
 - Las variables de entorno solo se leen en `config/env.ts` (api) o en un módulo equivalente en web. Nunca `process.env` suelto.
-- Errores del API con formato único: `{ error: { code, message, retryAfter? } }`. Códigos: `VALIDATION_ERROR`, `UNAUTHORIZED`, `NOT_FOUND`, `RATE_LIMITED`, `UPSTREAM_ERROR`, `INTERNAL_ERROR`.
+- Errores del API con formato único: `{ error: { code, message, retryAfter? } }`. Códigos: `VALIDATION_ERROR`, `UNAUTHORIZED`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `UPSTREAM_ERROR`, `INTERNAL_ERROR` (tabla de status HTTP en el spec 02 §2).
 - Nombres de archivo en kebab-case. Componentes React en PascalCase. Hooks con prefijo `use`.
 - Funciones pequeñas y con un solo propósito. Los comentarios explican el *porqué*, no el *qué*.
 - Sin secretos en el código, los logs ni `prompts/`. El token JWT y las contraseñas nunca se loguean.
