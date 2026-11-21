@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+.next/
+coverage/
+pnpm-lock.yaml
+**/prisma/migrations/
+
+# Documentation is hand-formatted (tables, Spanish prose); not touched by Prettier.
+*.md
