@@ -21,5 +21,5 @@
 ## Correcciones y decisiones humanas
 
 - Regla de idioma y formato de commits definidos por el autor.
-- Decisión de la IA, pendiente de validar: el `README.md` raíz irá en inglés porque lo lee el evaluador, como excepción a "los `.md` en español".
+- Decisión de la IA, rechazada por el autor en la sesión 05: el `README.md` raíz iría en inglés porque lo lee el evaluador. Finalmente va en español, como el resto de los `.md`.
 - Decisión de la IA: el PDF del enunciado no se sube al repositorio público, porque es un documento de terceros con datos de contacto.
