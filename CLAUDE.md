@@ -12,7 +12,7 @@ App de datos y visualización de acciones (prueba técnica RUUT). El plan comple
 ## Idioma
 
 - **Todo el código y la interfaz van 100 % en inglés:** identificadores, comentarios, textos de la UI, mensajes de error del API, logs, nombres de tests, nombres de ramas y mensajes de commit.
-- **Solo los archivos `.md` se escriben en español** (documentación, specs, informes de auditoría, sesiones de `prompts/`). Excepción: el `README.md` raíz, que leerá el evaluador, se escribe en inglés.
+- **Los archivos `.md` se escriben en español** (documentación, specs, informes de auditoría, sesiones de `prompts/` y también el `README.md` raíz).
 
 ## Contexto fijo
 
