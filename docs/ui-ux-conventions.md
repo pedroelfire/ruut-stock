@@ -30,7 +30,8 @@ Todos los colores se definen como **tokens CSS** en `apps/web/src/app/globals.cs
 | `--primary-foreground` | Texto sobre `--primary` | `#FFFFFF` | `#0B1215` |
 | `--positive` | Subidas | `#15803D` | `#22C55E` |
 | `--negative` | Bajadas y errores destructivos | `#B91C1C` | `#F05252` |
-| `--warning` | Límite de API alcanzado, dato obsoleto | `#B45309` | `#F59E0B` |
+| `--warning` | Límite de API alcanzado, dato obsoleto (texto, borde, icono) | `#B45309` | `#F59E0B` |
+| `--warning-subtle` | Fondo del banner de aviso, siempre con texto en `--warning` | `#F9F1EB` | `#272314` |
 | `--ring` | Foco visible | `#0E7C7B` | `#2BB5B0` |
 
 Reglas:
@@ -38,6 +39,7 @@ Reglas:
 - **La variación nunca se comunica solo con color.** Siempre signo (`+1.24%` / `−0.87%`) y, en listas, un icono de flecha (`ArrowUpRight` / `ArrowDownRight`). Así funciona para personas con daltonismo.
 - Variación igual a 0: `--muted-foreground`, sin flecha.
 - `--positive` y `--negative` se usan solo para variaciones de precio, nunca para decorar.
+- `--warning-subtle` es solo un fondo: siempre lleva encima texto, icono y borde en `--warning` (contraste AA en claro y en oscuro). No se usa para otros avisos ni para decorar.
 - Los modos claro y oscuro se implementan desde el principio con tokens, aunque el selector de tema sea un extra.
 
 ## 3. Tipografía
@@ -108,7 +110,7 @@ Orden vertical fijo:
 | Cargando | Skeleton con la forma del contenido final (nunca un spinner a pantalla completa) |
 | Vacío | Icono sencillo, una frase y una acción: "Your watchlist is empty" · "Search for a stock to add it to your watchlist." · botón `Search stocks` |
 | Error | Mensaje en lenguaje humano, sin códigos técnicos, con botón `Try again`: "We couldn't load your watchlist" · "Check your connection and try again." |
-| Límite de API alcanzado | Banner con `--warning`: "Data limit reached" · "Showing the last saved prices. Retrying in 42 s." Si hay datos en caché, se muestran con el badge `Stale` |
+| Límite de API alcanzado | Banner con fondo `--warning-subtle`, borde, icono y texto en `--warning`: "Data limit reached" · "Showing the last saved prices. Retrying in 42 s." Si hay datos en caché, se muestran con el badge `Stale` |
 | Dato con retraso | Badge discreto `Delayed · 15 min` junto a la hora del último dato |
 | Sin resultados de búsqueda | "No results for "xyz"" · "Try the ticker symbol, like AAPL." |
 
