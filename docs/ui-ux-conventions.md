@@ -31,14 +31,16 @@ Todos los colores se definen como **tokens CSS** en `apps/web/src/app/globals.cs
 | `--positive` | Subidas | `#15803D` | `#22C55E` |
 | `--negative` | Bajadas y errores destructivos | `#B91C1C` | `#F05252` |
 | `--warning` | Límite de API alcanzado, dato obsoleto (texto, borde, icono) | `#B45309` | `#F59E0B` |
-| `--warning-subtle` | Fondo del banner de aviso, siempre con texto en `--warning` | `#F9F1EB` | `#272314` |
+| `--warning-subtle` | Fondo del banner de aviso, siempre con texto en `--warning` | `#FBF4EF` | `#272314` |
 | `--ring` | Foco visible | `#0E7C7B` | `#2BB5B0` |
+| `--input` | Borde de inputs y controles de formulario (3:1 sobre `--background` y `--surface`) | `#7D8C94` | `#5B6B73` |
 
 Reglas:
 
 - **La variación nunca se comunica solo con color.** Siempre signo (`+1.24%` / `−0.87%`) y, en listas, un icono de flecha (`ArrowUpRight` / `ArrowDownRight`). Así funciona para personas con daltonismo.
 - Variación igual a 0: `--muted-foreground`, sin flecha.
-- `--positive` y `--negative` se usan solo para variaciones de precio, nunca para decorar.
+- `--positive` y `--negative` se usan solo para variaciones de precio, nunca para decorar. Excepción: `--negative` también marca los errores de formulario y las acciones destructivas.
+- Los hovers sobre `bg-accent` (que equivale a `--border`) llevan `text-foreground`: `--muted-foreground` sobre `--border` no llega a AA (4.48:1).
 - `--warning-subtle` es solo un fondo: siempre lleva encima texto, icono y borde en `--warning` (contraste AA en claro y en oscuro). No se usa para otros avisos ni para decorar.
 - Los modos claro y oscuro se implementan desde el principio con tokens, aunque el selector de tema sea un extra.
 
@@ -61,6 +63,7 @@ Reglas:
 - Escala de Tailwind (múltiplos de 4 px). No se usan valores arbitrarios (`p-[13px]`) salvo para justificar un caso concreto.
 - Radios: `rounded-lg` (8 px) en tarjetas y paneles, `rounded-md` (6 px) en inputs y botones, `rounded-full` en badges.
 - Elevación: bordes (`border border-border`) en lugar de sombras. `shadow-sm` solo en popovers y menús flotantes.
+- Overlay de diálogos: `bg-background/80` (token existente con opacidad; sirve en claro y en oscuro).
 - Contenedor de página: `mx-auto max-w-6xl px-4 sm:px-6`.
 
 ## 5. Estructura y layout
@@ -79,6 +82,13 @@ Reglas:
 
 - En móvil, el buscador se convierte en un botón de icono que abre un diálogo a pantalla completa.
 - Navegación con teclado en el buscador: `↑` `↓` para moverse, `Enter` para abrir, `Esc` para cerrar. Atajo `⌘K` / `Ctrl+K`.
+
+### Marca
+
+- Nombre visible: **Stocks**.
+- Símbolo: cuadrado de 28 px (`size-7 rounded-md bg-primary`) con el icono `TrendingUp` (`size-4 text-primary-foreground`). Es decorativo (`aria-hidden`).
+- Texto: `text-base font-semibold`, a la derecha del símbolo con `gap-2`.
+- Títulos del documento: `Stocks` en la raíz y `<Página> · Stocks` en el resto.
 
 ### Dashboard (watchlist)
 
@@ -116,8 +126,9 @@ Orden vertical fijo:
 
 ## 7. Componentes
 
-- Base: **shadcn/ui** en `apps/web/src/components/ui/`. No se editan salvo para aplicar tokens.
-- Iconos: **lucide-react** exclusivamente, con tamaño `size-4` en línea y `size-5` en botones de icono.
+- Base: **shadcn/ui** en `apps/web/src/components/ui/`. No se editan salvo para aplicar tokens y las reglas de §4 (elevación) y §9 (foco y áreas táctiles).
+- Los tamaños de botón `xs`, `sm`, `icon-xs` e `icon-sm` (menos de 40 px) no se usan en controles táctiles independientes.
+- Iconos: **lucide-react** exclusivamente, con tamaño `size-4` en línea, `size-5` en botones de icono y `size-6` en los iconos ilustrativos de los estados (vacío, error).
 - Antes de crear un componente nuevo se comprueba si ya existe uno equivalente en `components/`.
 - Los botones de icono llevan siempre `aria-label`.
 
@@ -139,7 +150,7 @@ El signo negativo es el carácter `−` (U+2212), no un guion.
 
 - Contraste AA: 4.5:1 para texto normal y 3:1 para texto grande y elementos gráficos.
 - Foco visible en todo elemento interactivo (`focus-visible:ring-2 ring-ring`).
-- Las áreas táctiles miden 40 × 40 px como mínimo.
+- Las áreas táctiles miden 40 × 40 px como mínimo. Excepción: los enlaces en línea dentro de un párrafo (WCAG 2.5.8).
 - Respetar `prefers-reduced-motion`: sin animaciones de entrada ni transiciones del gráfico.
 - Los gráficos llevan un resumen accesible (`aria-label` con el rango, el valor inicial, el final y la variación).
 - Formularios: `label` asociado, errores vinculados con `aria-describedby` y foco en el primer campo con error.
