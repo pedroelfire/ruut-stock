@@ -13,7 +13,7 @@ Registro de cómo se construyó la app con IA, como pide la prueba: herramientas
 ## Forma de trabajar
 
 1. **Spec primero.** Antes de escribir código se fijan el plan ([PLAN.md](../PLAN.md)), las reglas ([CLAUDE.md](../CLAUDE.md)), las convenciones visuales ([docs/ui-ux-conventions.md](../docs/ui-ux-conventions.md)) y los specs de `specs/`.
-2. **Agentes especializados.** La sesión principal delega: los agentes de desarrollo implementan, `ui-ux-guardian` vigila la interfaz, `code-reviewer` aprueba cada commit y `auditor` revisa cada fase completa.
+2. **Agentes especializados.** La sesión principal delega: los agentes de desarrollo implementan, `ui-ux-guardian` vigila la interfaz, `code-reviewer` aprueba cada commit y `auditor` revisa el proyecto completo una sola vez, al terminar todas las fases.
 3. **Revisión humana.** Cada fase empieza con luz verde explícita del autor, que revisa lo producido y corrige el rumbo.
 4. **Registro.** Cada petición queda en `sessions/NN-topic.md`, en orden.
 
@@ -37,6 +37,7 @@ prompts/
 | 03 | [Puesta a punto del repo](sessions/03-repo-setup.md) | Regla de idioma, convención de commits, registro de prompts, git init |
 | 04 | [Cierre de la Fase 0](sessions/04-phase-0-close.md) | Specs 01-03, andamiaje del monorepo, 3 rondas de `code-reviewer` |
 | 05 | [Ajustes: README, token y secretos](sessions/05-readme-token-secrets.md) | README en español, `--warning-subtle`, secretos movidos a archivos `.env` ignorados |
+| 06 | [Fase 1: backend base y auth](sessions/06-phase-1-backend-auth.md) | API Express con auth JWT, Prisma 7, 41 tests, prueba de punta a punta; auditor solo al final |
 
 ## Dónde se equivocó la IA
 
@@ -50,4 +51,6 @@ Registro honesto de errores de la IA y de lo que se corrigió a mano o por indic
 | 04 | Los primeros specs no cuadraban con el límite de créditos: watchlist de 10 símbolos frente a 8 créditos por minuto, y quotes "en lote" contados como una sola llamada. | Lo detectó `code-reviewer`. Se pasó a un máximo de 8 símbolos y reserva parcial de créditos. |
 | 04 | El rate limit por IP no tenía en cuenta que, detrás del BFF, todas las peticiones llegan desde el servidor de Next. | Lo detectó `code-reviewer`. El BFF reenvía la IP real y los límites usan email + IP. |
 | 04 | Huecos de contrato: `name` sin persistir, `stale` global en lugar de por dato, quote sin distinguir "no existe" de "sin créditos", posible bucle de redirección con una cookie rechazada. | Lo detectó `code-reviewer` en dos rondas; los specs se corrigieron antes de escribir código. |
+| 06 | `backend-dev` no tuvo en cuenta que, en Express 5, el callback de `listen` también recibe el error: con el puerto ocupado registraba "API listening" y salía con 0. Tampoco cubrió con tests el camino real de email duplicado (P2002) ni exigió `exp` en el JWT. | Lo detectó `code-reviewer` y se corrigió con tests. |
+| 06 | Al editar el spec 02, `backend-dev` usó un `String.replace` que interpretó `` $` `` dentro de `$2b$` y duplicó parte del documento. | El propio agente lo detectó y lo reparó antes de entregar. |
 | 04 | La primera configuración tenía detalles incorrectos: `engines` de Node incompatible con ESLint 10, `lint` sin `--max-warnings 0`, Postgres expuesto en toda la red local, `esModuleInterop` redundante. | Lo detectó `code-reviewer` y se corrigió. |
