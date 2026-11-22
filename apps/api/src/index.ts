@@ -3,6 +3,8 @@ import { loadEnv } from './config/env.js';
 import { createLogger } from './lib/logger.js';
 import { createPrismaClient } from './lib/prisma.js';
 import { createPrismaUserRepository } from './modules/auth/user.repository.js';
+import { createPrismaWatchlistRepository } from './modules/watchlist/watchlist.repository.js';
+import { createTwelveDataClient } from './providers/twelve-data/index.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -17,9 +19,19 @@ function main(): void {
       corsOrigins: env.CORS_ORIGIN,
       jwtSecret: env.JWT_SECRET,
       jwtExpiresInSeconds: env.JWT_EXPIRES_IN,
+      market: {
+        creditsPerMinute: env.TWELVE_DATA_CREDITS_PER_MINUTE,
+        creditsPerDay: env.TWELVE_DATA_CREDITS_PER_DAY,
+        delayMinutes: env.TWELVE_DATA_DELAY_MINUTES,
+      },
     },
     logger,
     userRepository: createPrismaUserRepository(prisma),
+    watchlistRepository: createPrismaWatchlistRepository(prisma),
+    marketDataProvider: createTwelveDataClient({
+      apiKey: env.TWELVE_DATA_API_KEY,
+      baseUrl: env.TWELVE_DATA_BASE_URL,
+    }),
   });
 
   // '::' listens on every IPv6 and IPv4 interface (dual-stack). Railway needs all interfaces, and

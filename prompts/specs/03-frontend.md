@@ -73,6 +73,14 @@ Riesgo aceptado: `GET /api/auth/expired` permite cerrar la sesión de otro usuar
 - Respuestas del quote en el servidor (contrato en el spec 02 §4):
   - `404` → `notFound()` ("We couldn't find "XYZ"").
   - `429` → estado de límite alcanzado dentro de la página (banner con cuenta atrás y `Try again`), **nunca** `notFound()`.
+  - `502` (falla el proveedor y no hay nada en caché) → estado de error con `Try again`, **nunca** `notFound()`.
+- Datos que llegan del API (verificado con datos reales el 2026-11-22):
+  - `quote.volume` puede ser `null`.
+  - En los rangos diarios, `t` es la fecha a las 00:00Z.
+  - `series.asOf` es la hora de obtención, no la del último punto.
+  - Los números llegan sin redondear (por ejemplo `-6.64999`): se formatean siempre con `lib/format.ts`.
+- En la watchlist, un fallo del proveedor llega como `200` con `quote: null` y **sin** `meta`: se muestra "Price unavailable" en la fila, sin banner. `meta.partial` solo indica falta de créditos.
+- Tras un `POST /watchlist` (devuelve `{ symbol, name, addedAt }` sin quote) se invalida `['watchlist']`.
 
 ### Búsqueda (cabecera)
 

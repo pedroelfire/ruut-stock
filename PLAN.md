@@ -304,15 +304,15 @@ model WatchlistItem {
 
 **Objetivo:** datos de mercado servidos por nuestro backend, protegidos frente al rate limit.
 
-- [ ] `providers/twelve-data`: cliente con timeout, mapeo a tipos propios y detección del error 429 (tanto por status HTTP como por el campo `code` del body).
-- [ ] `lib/cache.ts`: LRU con TTL por clave, dedupe de requests en vuelo y fallback a dato obsoleto.
-- [ ] Endpoints `/market/search`, `/market/quote` y `/market/series/:symbol`.
-- [ ] CRUD de `/watchlist` que devuelve los quotes en lote.
-- [ ] `lib/credit-budget.ts` con reserva parcial en lotes (spec 02 §5).
-- [ ] `express-rate-limit` por `userId` y, en el login, por email (detrás del BFF, la IP es siempre la del servidor de Next).
-- [ ] Tests del adaptador con respuestas mockeadas (éxito, 429, símbolo inexistente).
+- [x] `providers/twelve-data`: cliente con timeout, mapeo a tipos propios y detección del error 429 (tanto por status HTTP como por el campo `code` del body).
+- [x] `lib/cache.ts`: LRU con TTL por clave, dedupe de requests en vuelo y fallback a dato obsoleto.
+- [x] Endpoints `/market/search`, `/market/quote` y `/market/series/:symbol`.
+- [x] CRUD de `/watchlist` que devuelve los quotes en lote.
+- [x] `lib/credit-budget.ts` con reserva parcial en lotes (spec 02 §5).
+- [x] `express-rate-limit` por `userId` y, en el login, por email (detrás del BFF, la IP es siempre la del servidor de Next).
+- [x] Tests del adaptador con respuestas mockeadas (éxito, 429, símbolo inexistente).
 
-**Hecho cuando:** dos llamadas seguidas al mismo quote solo consumen un crédito y un 429 simulado devuelve el dato en caché con `stale: true`.
+**Hecho cuando:** dos llamadas seguidas al mismo quote solo consumen un crédito y un 429 simulado devuelve el dato en caché con `stale: true`. ✅ Verificado con la API real el 2026-11-22 (quote repetido desde caché; 429 simulado en tests) y 174 tests en verde.
 
 ### Fase 3: Frontend, auth y layout (~30 min)
 

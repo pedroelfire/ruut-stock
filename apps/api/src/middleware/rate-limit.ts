@@ -12,6 +12,9 @@ export const AUTH_RATE_LIMITS = {
   registerPerIp: { limit: 10, windowMs: 60 * MINUTE_MS },
 } as const;
 
+/** Spec 02 §6: general limit for every authenticated route outside /auth. */
+export const USER_RATE_LIMIT = { limit: 120, windowMs: MINUTE_MS } as const;
+
 /** Used as the email part of the key when the body has no valid email. */
 const INVALID_EMAIL_KEY = 'invalid';
 
@@ -24,12 +27,15 @@ function secondsUntilReset(req: Request, options: Options): number {
 }
 
 /** Routes the rejection through the central error handler so the body keeps the standard format. */
-function createLimiter(options: Partial<Options>): RequestHandler {
+function createLimiter(
+  options: Partial<Options>,
+  message = 'Too many attempts. Try again later.',
+): RequestHandler {
   return rateLimit({
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     handler: (req, _res, next, optionsUsed) => {
-      next(rateLimited(secondsUntilReset(req, optionsUsed), 'Too many attempts. Try again later.'));
+      next(rateLimited(secondsUntilReset(req, optionsUsed), message));
     },
     ...options,
   });
@@ -84,4 +90,18 @@ export function createAuthRateLimiters(): AuthRateLimiters {
   });
 
   return { login: [loginGlobalLimiter, loginFailureLimiter], register: registerLimiter };
+}
+
+/**
+ * 120 requests per minute per user, shared by every route it is mounted on. Must run after the
+ * auth middleware: the key is req.user.id (behind the BFF, IPs would all be the Next.js server).
+ */
+export function createUserRateLimiter(): RequestHandler {
+  return createLimiter(
+    {
+      ...USER_RATE_LIMIT,
+      keyGenerator: (req) => `user:${req.user?.id ?? clientIpKey(req)}`,
+    },
+    'Too many requests. Try again later.',
+  );
 }
