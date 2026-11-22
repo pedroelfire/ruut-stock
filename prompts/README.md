@@ -38,6 +38,7 @@ prompts/
 | 04 | [Cierre de la Fase 0](sessions/04-phase-0-close.md) | Specs 01-03, andamiaje del monorepo, 3 rondas de `code-reviewer` |
 | 05 | [Ajustes: README, token y secretos](sessions/05-readme-token-secrets.md) | README en español, `--warning-subtle`, secretos movidos a archivos `.env` ignorados |
 | 06 | [Fase 1: backend base y auth](sessions/06-phase-1-backend-auth.md) | API Express con auth JWT, Prisma 7, 41 tests, prueba de punta a punta; auditor solo al final |
+| 07 | [Fase 2: datos de mercado](sessions/07-phase-2-market-data.md) | Twelve Data, caché, presupuesto de créditos, watchlist, 174 tests, prueba con la API real |
 
 ## Dónde se equivocó la IA
 
@@ -51,6 +52,9 @@ Registro honesto de errores de la IA y de lo que se corrigió a mano o por indic
 | 04 | Los primeros specs no cuadraban con el límite de créditos: watchlist de 10 símbolos frente a 8 créditos por minuto, y quotes "en lote" contados como una sola llamada. | Lo detectó `code-reviewer`. Se pasó a un máximo de 8 símbolos y reserva parcial de créditos. |
 | 04 | El rate limit por IP no tenía en cuenta que, detrás del BFF, todas las peticiones llegan desde el servidor de Next. | Lo detectó `code-reviewer`. El BFF reenvía la IP real y los límites usan email + IP. |
 | 04 | Huecos de contrato: `name` sin persistir, `stale` global en lugar de por dato, quote sin distinguir "no existe" de "sin créditos", posible bucle de redirección con una cookie rechazada. | Lo detectó `code-reviewer` en dos rondas; los specs se corrigieron antes de escribir código. |
+| 07 | Esquemas del proveedor demasiado estrictos (`.optional()` rechaza `null`) y una sola fila mala tumbaba la búsqueda entera. Escritos sin datos reales, porque la key era inválida. | Lo detectó `code-reviewer`: validación tolerante y descarte de filas inválidas, comprobado después con datos reales. |
+| 07 | Al añadir el reembolso de créditos, `backend-dev` devolvía también los de respuestas 2xx que el proveedor sí cobró, lo que permitía superar el tope de 8 por minuto. | Lo detectó `code-reviewer` en la ronda 2: solo se reembolsa cuando no se sirvieron datos. |
+| 07 | La búsqueda devolvía símbolos OTC poco útiles y no priorizaba la coincidencia exacta de ticker. | Lo observó la sesión principal con datos reales; se filtraron las bolsas principales de EE. UU. y se ordenaron los resultados. |
 | 06 | `backend-dev` no tuvo en cuenta que, en Express 5, el callback de `listen` también recibe el error: con el puerto ocupado registraba "API listening" y salía con 0. Tampoco cubrió con tests el camino real de email duplicado (P2002) ni exigió `exp` en el JWT. | Lo detectó `code-reviewer` y se corrigió con tests. |
 | 06 | Al editar el spec 02, `backend-dev` usó un `String.replace` que interpretó `` $` `` dentro de `$2b$` y duplicó parte del documento. | El propio agente lo detectó y lo reparó antes de entregar. |
 | 04 | La primera configuración tenía detalles incorrectos: `engines` de Node incompatible con ESLint 10, `lint` sin `--max-warnings 0`, Postgres expuesto en toda la red local, `esModuleInterop` redundante. | Lo detectó `code-reviewer` y se corrigió. |
