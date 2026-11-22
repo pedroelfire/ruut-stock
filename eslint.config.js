@@ -1,10 +1,13 @@
 // Root ESLint flat config shared by every workspace package.
-// apps/web extends it later with the Next.js rules (eslint-config-next).
 import js from '@eslint/js';
+import nextPlugin from '@next/eslint-plugin-next';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+
+const webFiles = ['apps/web/**/*.{ts,tsx}'];
 
 export default defineConfig([
   globalIgnores([
@@ -35,6 +38,20 @@ export default defineConfig([
       ],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       eqeqeq: ['error', 'always'],
+    },
+  },
+  // apps/web: the Next.js and React Hooks rules. eslint-config-next is not used because it bundles
+  // eslint-plugin-react, -import and -jsx-a11y, whose peer ranges stop at ESLint 9.
+  {
+    files: webFiles,
+    extends: [nextPlugin.configs['core-web-vitals'], reactHooks.configs.flat['recommended-latest']],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+    },
+    rules: {
+      // Pages Router only, and it resolves `pages/` from the cwd, so it misfires when linting from
+      // apps/web. The app uses the App Router exclusively.
+      '@next/next/no-html-link-for-pages': 'off',
     },
   },
   // Keep last: turns off rules that conflict with Prettier.

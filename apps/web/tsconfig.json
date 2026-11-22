@@ -1,0 +1,31 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "incremental": true,
+    "allowJs": false,
+    // TS 6 defaults `types` to []; route handlers and the config files need the Node globals.
+    "types": ["node"],
+    "plugins": [{ "name": "next" }],
+    // No mapping for @ruut/shared on purpose: Turbopack resolves imports with these paths, and the
+    // bundle must use the compiled package (its `exports` point to dist), as the API does in
+    // production. tsconfig.typecheck.json adds the source mapping for `pnpm typecheck`.
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "src",
+    "test",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "next.config.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["node_modules"]
+}

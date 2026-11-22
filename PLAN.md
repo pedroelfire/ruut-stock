@@ -318,13 +318,13 @@ model WatchlistItem {
 
 **Objetivo:** el usuario puede registrarse, entrar y ver un layout protegido.
 
-- [ ] Next.js con Tailwind y shadcn/ui.
-- [ ] Route Handlers BFF: login, registro, demo, logout y expired (escriben y borran la cookie httpOnly) y la pasarela `/api/bff/[...path]` con lista blanca hacia Express.
-- [ ] `proxy.ts` que redirige a `/login` si no hay sesión.
-- [ ] Pantallas de login y registro con validación (Zod de `shared`) y errores claros.
-- [ ] Layout con cabecera, buscador y menú de usuario.
+- [x] Next.js con Tailwind y shadcn/ui.
+- [x] Route Handlers BFF: login, registro, demo, logout y expired (escriben y borran la cookie httpOnly) y la pasarela `/api/bff/[...path]` con lista blanca hacia Express.
+- [x] `proxy.ts` que redirige a `/login` si no hay sesión.
+- [x] Pantallas de login y registro con validación (Zod de `shared`) y errores claros.
+- [x] Layout con cabecera, buscador y menú de usuario.
 
-**Hecho cuando:** login, logout y redirecciones funcionan, y el JWT no es accesible desde `document.cookie`.
+**Hecho cuando:** login, logout y redirecciones funcionan, y el JWT no es accesible desde `document.cookie`. ✅ Verificado el 2026-11-22 con `next start` y el API: login demo, cookie HttpOnly, redirecciones, CSRF rechazado (70 tests web).
 
 ### Fase 4: Features del producto (~50 min)
 

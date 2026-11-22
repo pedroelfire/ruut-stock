@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Checks against the shared source, so a stale packages/shared/dist cannot hide errors.
+    "paths": {
+      "@/*": ["./src/*"],
+      "@ruut/shared": ["../../packages/shared/src/index.ts"]
+    },
+    "incremental": false
+  }
+}

@@ -1,0 +1,102 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/*
+ * Design tokens: docs/ui-ux-conventions.md §2 is the source of truth. This file is the only place
+ * where color values live; components use the semantic utilities (bg-surface, text-positive...).
+ * Dark mode follows the operating system until a theme selector exists.
+ */
+:root {
+  color-scheme: light;
+  --background: #ffffff;
+  --surface: #f7f9fa;
+  --border: #e3e8eb;
+  --foreground: #0e1a1f;
+  --muted-foreground: #5b6b73;
+  --primary: #0e7c7b;
+  --primary-foreground: #ffffff;
+  --positive: #15803d;
+  --negative: #b91c1c;
+  --warning: #b45309;
+  --warning-subtle: #fbf4ef;
+  --ring: #0e7c7b;
+  --input: #7d8c94;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #0b1215;
+    --surface: #111a1e;
+    --border: #22303a;
+    --foreground: #e6edf0;
+    --muted-foreground: #8a9ba3;
+    --primary: #2bb5b0;
+    --primary-foreground: #0b1215;
+    --positive: #22c55e;
+    --negative: #f05252;
+    --warning: #f59e0b;
+    --warning-subtle: #272314;
+    --ring: #2bb5b0;
+    --input: #5b6b73;
+  }
+}
+
+/* Drop Tailwind's default palette so `text-green-600` and friends do not even compile. */
+@theme {
+  --color-*: initial;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-ring: var(--ring);
+  /* Form control borders: 3:1 against background and surface (WCAG 1.4.11). */
+  --color-input: var(--input);
+
+  /* shadcn/ui names, mapped onto the project tokens so generated components need no edits. */
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--foreground);
+  --color-secondary: var(--surface);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--surface);
+  /* Hover and highlighted items sit on --surface (popovers), so they need a visible step. */
+  --color-accent: var(--border);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--negative);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+}
+
+/* §9: no entrance animations or transitions for users who ask for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
