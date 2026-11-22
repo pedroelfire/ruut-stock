@@ -1,0 +1,25 @@
+# Docker build context is the repo root (both services depend on packages/shared).
+# Keep secrets, local builds and installs out of the image.
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/src/generated
+**/*.tsbuildinfo
+**/next-env.d.ts
+
+# Secrets: only the committed templates may enter the build context.
+**/.env
+**/.env.*
+!**/.env.example
+
+.git
+.claude
+.railway
+.vscode
+.idea
+docs
+prompts
+*.md
+fullstack-technical-test.pdf
+compose.yaml

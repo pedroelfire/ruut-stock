@@ -227,7 +227,7 @@ El margen es estrecho: una watchlist de 5 símbolos en frío cuesta 5 créditos 
 | Variable | Obligatoria | Por defecto |
 |---|---|---|
 | `NODE_ENV` | No | `development` |
-| `PORT` | No | `4000` (Railway la inyecta) |
+| `PORT` | No | `4000`. En Railway se fija en `4000` desde `.railway/railway.ts`, porque la web llega al api por la red privada en un puerto conocido y el dominio público apunta a él |
 | `LOG_LEVEL` | No | `info` |
 | `DATABASE_URL` | Sí | |
 | `JWT_SECRET` | Sí (32 caracteres o más) | |

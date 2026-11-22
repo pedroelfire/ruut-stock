@@ -154,7 +154,7 @@ ruut-stocks/
 │   │   │   ├── migrations/
 │   │   │   └── seed.ts               # usuario demo + watchlist inicial
 │   │   ├── test/
-│   │   ├── railway.json
+│   │   ├── Dockerfile                # imagen del servicio api (contexto: raíz del repo)
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   │
@@ -183,7 +183,7 @@ ruut-stocks/
 │       │   │   └── format.ts         # moneda, %, fechas
 │       │   └── proxy.ts              # protección de rutas (Next 16, antes middleware.ts)
 │       ├── public/
-│       ├── railway.json
+│       ├── Dockerfile                # imagen del servicio web (contexto: raíz del repo)
 │       ├── next.config.ts
 │       ├── package.json
 │       └── tsconfig.json
@@ -209,6 +209,9 @@ ruut-stocks/
 │       ├── 02-ui-mockup.md
 │       └── 03-repo-setup.md
 │
+├── .railway/
+│   └── railway.ts                    # Infrastructure as Code de Railway (Postgres, api, web)
+├── .dockerignore
 ├── .claude/
 │   └── agents/                       # backend-dev, frontend-dev, code-reviewer, auditor, ui-ux-guardian
 ├── docs/
@@ -346,10 +349,10 @@ model WatchlistItem {
 
 **Objetivo:** dos URLs públicas funcionando. Ver la sección 6.
 
-Avisos que dejó la revisión de la Fase 1:
-- El `prepare` de `shared` y el `build` del api necesitan `typescript`, y el seed necesita `tsx`, que hoy son devDependencies. Hay que evitar que Railway pode las devDependencies antes del build o del seed, o mover esas dependencias.
-- `start` resuelve `@ruut/shared` por el symlink del workspace, así que cada servicio se construye desde la raíz del repo, como ya indica la sección 6.
-- Verificar que el api, que escucha en `::`, es accesible por la red privada (`api.railway.internal`) y que el edge de Railway pone la IP real como última entrada de `X-Forwarded-For`.
+Avisos que dejó la revisión de la Fase 1, y cómo se resolvieron:
+- Las devDependencies (`typescript` para el build, `tsx` para el seed) siguen disponibles: cada imagen se construye con un Dockerfile propio que no las poda.
+- Cada servicio se construye desde la raíz del repo (contexto de Docker), así que `@ruut/shared` se resuelve por el workspace.
+- Pendiente de comprobar en producción: que el api, que escucha en `::`, responde por la red privada (`api.railway.internal`) y que el edge de Railway pone la IP real como última entrada de `X-Forwarded-For`.
 
 **Hecho cuando:** desde una ventana de incógnito se puede registrar un usuario nuevo y usar la app completa en producción, y `GET <api>/health` responde 200.
 
@@ -387,79 +390,58 @@ Avisos que dejó la revisión de la Fase 1:
 ### Topología
 
 ```
-Railway project: ruut-stocks
-├── web       (apps/web)   → https://ruut-stocks-web.up.railway.app   (público)
-├── api       (apps/api)   → https://ruut-stocks-api.up.railway.app   (público)
-│                            api.railway.internal:PORT                (privado, usado por web)
-└── Postgres  (plugin)     → DATABASE_URL referenciada desde api
+Railway project: ruut-tech-test
+├── web       (apps/web/Dockerfile) → https://ruut-stock-web.up.railway.app   (público, puerto 3000)
+├── api       (apps/api/Dockerfile) → https://ruut-stock-api.up.railway.app   (público, puerto 4000)
+│                                     api.railway.internal:4000                (privado, usado por web)
+└── Postgres                        → DATABASE_URL referenciada desde api
 ```
 
-### Configuración por servicio
+### Infrastructure as Code: `.railway/railway.ts`
 
-**api: `apps/api/railway.json`**
+> ⚠️ Cambio respecto al plan original (verificado el 2026-11-22 en docs.railway.com): los archivos `railway.json` y `railway.toml` (Config as Code) están deprecados. Los servicios nuevos ya no pueden usarlos y Railway deja de leerlos el 2026-12-01. El reemplazo es **Infrastructure as Code**: un archivo `.railway/railway.ts` escrito con el SDK oficial `railway` (`railway/iac`), que se aplica con la CLI (`railway config plan` y `railway config apply`). Railway no lo lee en cada deploy: los deploys salen de GitHub.
 
-```json
-{
-  "$schema": "https://railway.com/railway.schema.json",
-  "build": {
-    "buildCommand": "pnpm --filter @ruut/shared build && pnpm --filter @ruut/api build"
-  },
-  "deploy": {
-    "preDeployCommand": "pnpm --filter @ruut/api exec prisma migrate deploy",
-    "startCommand": "pnpm --filter @ruut/api start",
-    "healthcheckPath": "/health",
-    "restartPolicyType": "ON_FAILURE"
-  }
-}
-```
-
-**web: `apps/web/railway.json`**
-
-```json
-{
-  "$schema": "https://railway.com/railway.schema.json",
-  "build": {
-    "buildCommand": "pnpm --filter @ruut/shared build && pnpm --filter @ruut/web build"
-  },
-  "deploy": {
-    "startCommand": "pnpm --filter @ruut/web start",
-    "healthcheckPath": "/",
-    "restartPolicyType": "ON_FAILURE"
-  }
-}
-```
-
-> Nota de monorepo: como ambos servicios dependen de `packages/shared`, el build se ejecuta desde la **raíz del repo**. En Railway se deja el *Root Directory* en `/`, se indica la ruta del archivo de config (`apps/api/railway.json` o `apps/web/railway.json`) y se configuran los *Watch Paths* (`apps/api/**`, `packages/shared/**` para api; `apps/web/**`, `packages/shared/**` para web).
+Qué declara:
+- **Postgres**, con su `DATABASE_URL` referenciada desde el api.
+- **api** y **web** con origen GitHub (`pedroelfire/ruut-stock`, rama `main`) y builder **Dockerfile** (`apps/api/Dockerfile` y `apps/web/Dockerfile`).
+  - Se eligió Dockerfile en lugar de Railpack porque Railpack tiene problemas conocidos con monorepos pnpm: versión de pnpm, poda de devDependencies y scripts `prepare`.
+  - Las imágenes son de una sola etapa y conservan las devDependencies, porque el seed del pre-deploy usa `tsx`.
+- **Watch paths** por servicio: su carpeta, `packages/shared`, los manifiestos del workspace, `tsconfig.base.json` y `.dockerignore`.
+- **Pre-deploy del api:** `pnpm run db:release`, que ejecuta las migraciones y luego el seed idempotente del usuario demo. Si falla, el deploy se detiene.
+  - Efecto del seed en cada deploy: vuelve a añadir los símbolos demo que se hayan quitado de la cuenta demo y rehace el hash de su contraseña.
+  - Además, ningún deploy del api pasa sin `DEMO_USER_PASSWORD`.
+- **Healthchecks:** `/health` en el api y `/login` en la web (`/` redirige y Railway solo acepta 2xx).
+- **Dominios** `*.up.railway.app` de los dos servicios (`networking.serviceDomains`), con puertos fijos: 4000 para el api y 3000 para la web.
+- **Secretos con `preserve()`:** el archivo no contiene ningún valor secreto.
 
 ### Variables de entorno
 
 | Servicio | Variable | Valor |
 |---|---|---|
-| api | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
-| api | `JWT_SECRET` | aleatorio de 32 bytes o más |
+| api | `DATABASE_URL` | referencia a `Postgres.DATABASE_URL` |
+| api | `JWT_SECRET` | `preserve()`: aleatorio de 32 bytes o más, propio de producción |
 | api | `JWT_EXPIRES_IN` | `1h` |
-| api | `TWELVE_DATA_API_KEY` | API key de Twelve Data |
-| api | `CORS_ORIGIN` | `https://${{web.RAILWAY_PUBLIC_DOMAIN}}` |
-| api | `PORT` | la inyecta Railway (el api escucha en `::`, dual-stack) |
-| web | `API_INTERNAL_URL` | `http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}` |
+| api | `TWELVE_DATA_API_KEY` | `preserve()` |
+| api | `CORS_ORIGIN` | `https://ruut-stock-web.up.railway.app` |
+| api | `PORT` | `4000` fijo (el api escucha en `::`, dual-stack) |
 | api | `NODE_ENV` / `LOG_LEVEL` | `production` / `info` |
-| api | `TWELVE_DATA_BASE_URL` | opcional, por defecto `https://api.twelvedata.com` |
-| api | `TWELVE_DATA_CREDITS_PER_MINUTE` / `_PER_DAY` | opcionales, por defecto `8` / `800` |
-| api | `TWELVE_DATA_DELAY_MINUTES` | opcional, por defecto `0` |
-| api | `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | solo para el seed; el servidor arranca sin ellas |
-| web | `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | iguales a las del api (solo en el servidor) |
-| web | `SESSION_COOKIE_NAME` | `ruut_session` |
+| api | `TWELVE_DATA_CREDITS_PER_MINUTE` / `_PER_DAY` / `TWELVE_DATA_DELAY_MINUTES` | `8` / `800` / `0` |
+| api | `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | `preserve()`: las usa el seed del pre-deploy |
+| web | `PORT` | `3000` fijo |
+| web | `API_INTERNAL_URL` | `http://${{api.RAILWAY_PRIVATE_DOMAIN}}:4000` |
+| web | `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | referencias a las del api (una sola fuente) |
+| web | `SESSION_COOKIE_NAME` / `NODE_ENV` | `ruut_session` / `production` |
 
 La lista completa, con obligatoriedad y valores por defecto, está en el spec 02 §7 y en el spec 03 §8.
 
-### Pasos de despliegue
+### Runbook de despliegue
 
-1. Subir el repo a GitHub (público).
-2. Crear el proyecto en Railway y añadir **Postgres**.
-3. Añadir el servicio **api** desde el repo, con config path `apps/api/railway.json`, sus variables, y generar el dominio público.
-4. Añadir el servicio **web** desde el mismo repo, con config path `apps/web/railway.json`, sus variables, y generar el dominio público.
-5. Ejecutar el seed una vez (`railway run pnpm --filter @ruut/api exec prisma db seed`) para crear el usuario demo.
-6. Smoke test en producción: `/health`, registro, login, búsqueda, watchlist y detalle.
+1. Push del repo a GitHub (público): `pedroelfire/ruut-stock`.
+2. `railway link` al proyecto `ruut-tech-test` y `railway config plan` para revisar el plan.
+3. `railway config apply`: crea Postgres, api y web con sus dominios. El primer deploy del api falla porque aún no tiene los secretos.
+4. `railway variables --set` en el api: `JWT_SECRET` (generado nuevo), `TWELVE_DATA_API_KEY` y `DEMO_USER_*`. Se leen de los `.env` locales sin imprimirlos.
+5. Redeploy del api y de la web.
+6. Smoke test en producción: `/health`, registro, login demo, búsqueda, watchlist y detalle.
 
 ---
 
