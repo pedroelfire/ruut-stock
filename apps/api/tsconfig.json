@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    // TS 6 defaults `types` to []; the API needs the Node globals (process, Buffer...).
+    "types": ["node"],
+    "noEmit": true,
+    // Typecheck against the shared source so a stale packages/shared/dist cannot hide errors.
+    // tsconfig.build.json resets this: the emitted JS imports the compiled package, as in production.
+    "paths": {
+      "@ruut/shared": ["../../packages/shared/src/index.ts"]
+    }
+  },
+  "include": ["src", "test", "prisma", "prisma.config.ts", "vitest.config.ts"]
+}

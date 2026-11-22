@@ -15,6 +15,7 @@ export default defineConfig([
     '**/coverage/',
     '**/next-env.d.ts',
     '**/prisma/migrations/',
+    '**/src/generated/',
   ]),
   js.configs.recommended,
   tseslint.configs.recommended,

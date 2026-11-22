@@ -4,7 +4,10 @@
 
 ## 1. Stack y estructura
 
-- Node `^22.13.0` o `>=24`, Express 5, TypeScript (`strict`), Prisma con PostgreSQL, Zod, pino, bcrypt, jsonwebtoken, helmet, cors, express-rate-limit y lru-cache.
+- Node `^22.13.0` o `>=24`, Express 5, TypeScript (`strict`), Prisma 7 con PostgreSQL, Zod 4, pino (con pino-http para el log de peticiones), bcryptjs, jsonwebtoken, helmet, cors, express-rate-limit y lru-cache.
+- **bcryptjs en lugar de `bcrypt` nativo:** es JS puro, así que no necesita compilación nativa ni en Windows ni en Railway. Genera hashes bcrypt estándar (`$2b$`), con el mismo coste y el mismo límite de 72 bytes.
+- **Prisma 7:** la URL de conexión vive en `apps/api/prisma.config.ts` (no en `schema.prisma`) y el cliente se conecta con el driver adapter de pg (`@prisma/adapter-pg`). El cliente se genera con el generador `prisma-client` en `src/generated/prisma` (ignorado por git); `pnpm install` (script `prepare`), `build` y `typecheck` ejecutan `prisma generate`.
+- `packages/shared` se compila a `dist` (JS y `.d.ts`); `apps/api` consume esa salida, también en producción. El script `prepare` de `shared` lo compila en cada `pnpm install`.
 - Tests con Vitest y Supertest.
 - Estructura de carpetas: la de PLAN.md §4 (`config/`, `middleware/`, `modules/<feature>/`, `providers/twelve-data/`, `lib/`).
 - Los esquemas Zod de request y response viven en `packages/shared` y se exportan con su tipo inferido, para que el frontend use los mismos.
@@ -51,7 +54,7 @@ model WatchlistItem {
 }
 ```
 
-**Seed:** crea el usuario demo (`DEMO_USER_EMAIL`, por defecto `demo@example.com`; contraseña en `DEMO_USER_PASSWORD`) con `AAPL` (Apple Inc.), `MSFT` (Microsoft Corporation), `NVDA` (NVIDIA Corporation), `TSLA` (Tesla, Inc.) y `AMZN` (Amazon.com, Inc.). Los nombres van fijos en el seed para no gastar créditos al sembrar.
+**Seed:** crea el usuario demo (`DEMO_USER_EMAIL`, por defecto `demo@example.com`; contraseña en `DEMO_USER_PASSWORD`) con `AAPL` (Apple Inc.), `MSFT` (Microsoft Corporation), `NVDA` (NVIDIA Corporation), `TSLA` (Tesla, Inc.) y `AMZN` (Amazon.com, Inc.). Los nombres van fijos en el seed para no gastar créditos al sembrar. El seed es idempotente (upsert del usuario, que además actualiza el hash si cambia la contraseña, e inserción de símbolos sin duplicados) y falla con un mensaje claro si falta `DEMO_USER_PASSWORD`.
 
 ## 4. Endpoints
 
@@ -68,7 +71,7 @@ model WatchlistItem {
 | `GET /auth/me` | (Bearer) | `200 { data: { user } }` |
 
 - Email: formato válido, normalizado a minúsculas y sin espacios.
-- Contraseña: 8 caracteres como mínimo y **72 bytes UTF-8 como máximo**, el límite real de bcrypt, comprobado con `TextEncoder` en el esquema compartido. Si no, bcrypt truncaría en silencio.
+- Contraseña: 8 caracteres como mínimo y **72 bytes UTF-8 como máximo**, el límite real de bcrypt, comprobado con `TextEncoder` en el esquema compartido. Si no, bcrypt truncaría en silencio. Login y registro usan las mismas reglas, así que un login con una contraseña de menos de 8 caracteres responde `400 VALIDATION_ERROR` en lugar de `401` (no revela si el email existe).
 - bcrypt con coste 10. En el login se compara también cuando el usuario no existe (con un hash ficticio), para no filtrar por tiempo qué emails existen.
 - JWT HS256 con payload `{ sub: userId, email }` y expiración `JWT_EXPIRES_IN` (1 h por defecto). La verificación fija `algorithms: ['HS256']`. Sin refresh token en el MVP.
 
@@ -177,9 +180,10 @@ El margen es estrecho: una watchlist de 5 símbolos en frío cuesta 5 créditos 
 
 ## 6. Seguridad
 
-- helmet; CORS con lista blanca (`CORS_ORIGIN`, admite varios orígenes separados por comas).
+- helmet; CORS con lista blanca (`CORS_ORIGIN`, admite varios orígenes separados por comas). Cada valor se normaliza a su origen (`new URL(o).origin`, de modo que `http://localhost:3000/` queda en `http://localhost:3000`) y el arranque falla si alguno no es un origen `http`/`https` puro (con ruta, query, fragmento o credenciales).
+- El servidor escucha en `::` (dual-stack, IPv6 e IPv4), porque la red privada de Railway puede ser solo IPv6. Si `listen` falla (por ejemplo, puerto ocupado), se loguea como `fatal` y el proceso sale con código 1.
 - Rate limit general de 120 peticiones por minuto **por `userId`**, montado después del middleware de auth (necesita `req.user`). Todas las rutas fuera de auth exigen token.
-- Body JSON limitado a 10 kb.
+- Body JSON limitado a 10 kb. Un body mayor o un JSON mal formado responden `400 VALIDATION_ERROR` (el código de la tabla de §2, no un `413`).
 - `app.set('trust proxy', 1)`, con el razonamiento de "IP real del cliente" en §4 Auth.
 - Logs con pino: método, ruta, status y duración. Nunca se loguean el header `Authorization`, los bodies de auth ni la API key.
 
@@ -192,7 +196,7 @@ El margen es estrecho: una watchlist de 5 símbolos en frío cuesta 5 créditos 
 | `LOG_LEVEL` | No | `info` |
 | `DATABASE_URL` | Sí | |
 | `JWT_SECRET` | Sí (32 caracteres o más) | |
-| `JWT_EXPIRES_IN` | No | `1h` |
+| `JWT_EXPIRES_IN` | No | `1h` (segundos o número con sufijo `s`, `m`, `h` o `d`) |
 | `CORS_ORIGIN` | Sí | |
 | `TWELVE_DATA_API_KEY` | Sí | |
 | `TWELVE_DATA_BASE_URL` | No | `https://api.twelvedata.com` |

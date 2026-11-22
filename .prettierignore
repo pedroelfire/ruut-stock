@@ -5,6 +5,7 @@ build/
 coverage/
 pnpm-lock.yaml
 **/prisma/migrations/
+**/src/generated/
 
 # Documentation is hand-formatted (tables, Spanish prose); not touched by Prettier.
 *.md

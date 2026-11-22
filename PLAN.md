@@ -78,8 +78,8 @@
 | Backend | **Express 5** + TypeScript | Preferido por el evaluador |
 | Validación | **Zod** (en `packages/shared`) | Mismo esquema valida requests en el back y tipa respuestas en el front |
 | Base de datos | **PostgreSQL en Railway** | Todo en un solo proyecto de Railway; red privada entre servicios. Supabase sería la alternativa si hiciera falta auth gestionada, pero el JWT lo emitimos nosotros |
-| ORM | **Prisma** | Migraciones sencillas y cliente tipado |
-| Auth | **jsonwebtoken** + **bcrypt** | JWT propio, emitido por Express (requisito explícito) |
+| ORM | **Prisma 7** (con `@prisma/adapter-pg`) | Migraciones sencillas y cliente tipado |
+| Auth | **jsonwebtoken** + **bcryptjs** | JWT propio, emitido por Express (requisito explícito). bcryptjs es JS puro: no necesita compilación nativa en Windows ni en Railway |
 | Caché de mercado | **LRU en memoria** (`lru-cache`) con TTL por tipo de dato | Suficiente para una sola instancia; reduce el consumo de créditos de Twelve Data |
 | Rate limiting propio | **express-rate-limit** | Protege nuestros créditos frente a abuso |
 | Seguridad HTTP | **helmet** + **cors** (lista blanca) | Lo básico |
@@ -137,7 +137,7 @@ ruut-stocks/
 │   │   │   │   ├── error-handler.ts  # formato de error uniforme
 │   │   │   │   └── rate-limit.ts
 │   │   │   ├── modules/
-│   │   │   │   ├── auth/             # routes, controller, service
+│   │   │   │   ├── auth/             # routes, controller, service, user.repository (frontera con Prisma)
 │   │   │   │   ├── market/           # search, quote, time-series
 │   │   │   │   └── watchlist/        # CRUD de la watchlist del usuario
 │   │   │   ├── providers/
@@ -212,8 +212,7 @@ ruut-stocks/
 ├── .claude/
 │   └── agents/                       # backend-dev, frontend-dev, code-reviewer, auditor, ui-ux-guardian
 ├── docs/
-│   ├── ui-ux-conventions.md          # fuente de verdad visual
-│   └── audits/                       # informes del agente auditor
+│   └── ui-ux-conventions.md          # fuente de verdad visual
 ├── .editorconfig / .nvmrc / .prettierrc.json / .prettierignore
 ├── .gitignore / .gitattributes
 ├── CLAUDE.md                         # reglas del proyecto para la IA
@@ -291,15 +290,15 @@ model WatchlistItem {
 
 **Objetivo:** un Express funcional con usuarios y JWT.
 
-- [ ] `app.ts` con helmet, cors (lista blanca), JSON, pino y manejador de errores.
-- [ ] `config/env.ts` que valida las variables con Zod y falla al arrancar si falta alguna.
-- [ ] Prisma con `User` y `WatchlistItem`, primera migración y seed con el usuario demo.
-- [ ] `POST /auth/register`, `POST /auth/login` y `GET /auth/me` con bcrypt y JWT.
-- [ ] Middleware `auth` que valida `Authorization: Bearer`.
-- [ ] `GET /health`.
-- [ ] Tests: registro, login correcto e incorrecto, y ruta protegida sin token o con token inválido.
+- [x] `app.ts` con helmet, cors (lista blanca), JSON, pino y manejador de errores.
+- [x] `config/env.ts` que valida las variables con Zod y falla al arrancar si falta alguna.
+- [x] Prisma con `User` y `WatchlistItem`, primera migración y seed con el usuario demo.
+- [x] `POST /auth/register`, `POST /auth/login` y `GET /auth/me` con bcryptjs y JWT.
+- [x] Middleware `auth` que valida `Authorization: Bearer`.
+- [x] `GET /health`.
+- [x] Tests: registro, login correcto e incorrecto, y ruta protegida sin token o con token inválido.
 
-**Hecho cuando:** se puede hacer login con curl y llamar a `/auth/me` con el token.
+**Hecho cuando:** se puede hacer login con curl y llamar a `/auth/me` con el token. ✅ Verificado contra Postgres real el 2026-11-21 (41 tests en verde).
 
 ### Fase 2: Integración con Twelve Data y caché (~40 min)
 
@@ -344,6 +343,11 @@ model WatchlistItem {
 ### Fase 5: Despliegue en Railway (~20 min)
 
 **Objetivo:** dos URLs públicas funcionando. Ver la sección 6.
+
+Avisos que dejó la revisión de la Fase 1:
+- El `prepare` de `shared` y el `build` del api necesitan `typescript`, y el seed necesita `tsx`, que hoy son devDependencies. Hay que evitar que Railway pode las devDependencies antes del build o del seed, o mover esas dependencias.
+- `start` resuelve `@ruut/shared` por el symlink del workspace, así que cada servicio se construye desde la raíz del repo, como ya indica la sección 6.
+- Verificar que el api, que escucha en `::`, es accesible por la red privada (`api.railway.internal`) y que el edge de Railway pone la IP real como última entrada de `X-Forwarded-For`.
 
 **Hecho cuando:** desde una ventana de incógnito se puede registrar un usuario nuevo y usar la app completa en producción, y `GET <api>/health` responde 200.
 
@@ -434,7 +438,7 @@ Railway project: ruut-stocks
 | api | `JWT_EXPIRES_IN` | `1h` |
 | api | `TWELVE_DATA_API_KEY` | API key de Twelve Data |
 | api | `CORS_ORIGIN` | `https://${{web.RAILWAY_PUBLIC_DOMAIN}}` |
-| api | `PORT` | la inyecta Railway (escuchar en `0.0.0.0`) |
+| api | `PORT` | la inyecta Railway (el api escucha en `::`, dual-stack) |
 | web | `API_INTERNAL_URL` | `http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}` |
 | api | `NODE_ENV` / `LOG_LEVEL` | `production` / `info` |
 | api | `TWELVE_DATA_BASE_URL` | opcional, por defecto `https://api.twelvedata.com` |

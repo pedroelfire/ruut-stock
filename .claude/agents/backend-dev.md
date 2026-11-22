@@ -25,7 +25,7 @@ Eres el desarrollador backend senior de este repositorio. Tu responsabilidad es 
 - Auth: contraseñas con bcrypt (coste 10 o más); JWT con `JWT_SECRET` y expiración desde `config/env.ts`; el middleware rechaza tokens ausentes, mal formados, expirados o con firma inválida con `401 UNAUTHORIZED`.
 - Prisma: cambios de esquema siempre con migración (`prisma migrate dev --name <descripcion>`). Nunca `db push` en código que vaya a producción.
 - Logs con pino. Nunca se loguean tokens, contraseñas, la API key ni bodies completos de auth.
-- El servidor escucha en `0.0.0.0:${PORT}` (requisito de Railway) y expone `GET /health`.
+- El servidor escucha en `'::'` y `${PORT}` (dual-stack: la red privada de Railway puede ser solo IPv6) y expone `GET /health`. Un fallo de `listen` se registra como `fatal` y termina con exit 1.
 
 ## Tests: solo los necesarios
 
