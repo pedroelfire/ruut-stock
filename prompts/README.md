@@ -41,6 +41,8 @@ prompts/
 | 07 | [Fase 2: datos de mercado](sessions/07-phase-2-market-data.md) | Twelve Data, caché, presupuesto de créditos, watchlist, 174 tests, prueba con la API real |
 | 08 | [Fase 3: frontend, auth y layout](sessions/08-phase-3-frontend-auth.md) | Next 16 con BFF, cookie httpOnly, `proxy.ts`, protección CSRF, marca "Stocks", 70 tests web |
 | 09 | [Fase 4: features del producto](sessions/09-phase-4-features.md) | Buscador, watchlist, detalle con gráfico, estados de límite y error, 124 tests web |
+| 10 | [Fase 5: despliegue en Railway](sessions/10-phase-5-railway-deploy.md) | Infrastructure as Code, Dockerfiles, repo público en GitHub, web y api en producción |
+| 11 | [Fase 6: README y cierre](sessions/11-phase-6-readme-close.md) | README raíz, contraste con el PDF, registro final |
 
 ## Dónde se equivocó la IA
 
@@ -65,4 +67,6 @@ Registro honesto de errores de la IA y de lo que se corrigió a mano o por indic
 | 09 | La CLI de shadcn generó `import { cn } from "cn"` e instaló un paquete npm desconocido llamado `cn`. | Lo detectó `frontend-dev`: desinstaló el paquete, corrigió los imports y comprobó el lockfile. `code-reviewer` verificó que no quedaba rastro. |
 | 09 | Las sparklines respetaban el máximo de 2 a la vez solo en la primera carga: al volver al dashboard o al reconectar se refetcheaban todas de golpe (hasta 8 créditos). Además, dos altas seguidas borraban la primera fila optimista. | Lo detectó `code-reviewer` (el segundo bug salió al escribir el test que pidió). Se fijó `staleTime: Infinity` en las sparklines, con tests a nivel de hook. |
 | 09 | El aviso de límite decía "Showing the last saved prices" aunque no hubiera nada guardado, y las etiquetas del eje en 1W repetían la misma fecha. | Lo detectó `ui-ux-guardian`; el autor aprobó el copy nuevo. |
+| 10 | El plan de la sesión 00 configuraba Railway con `railway.json` (Config as Code), que estaba deprecado: los servicios nuevos ya no pueden usarlo y deja de leerse el 2026-12-01. El conocimiento de la IA estaba desactualizado. | Lo detectó la propia IA al leer la documentación vigente antes de desplegar. Se rehízo con Infrastructure as Code (`.railway/railway.ts`), verificado contra los tipos del SDK oficial. |
+| 10 | El primer IaC no declaraba los dominios públicos. Sin el de la web, `CORS_ORIGIN` quedaba en `https://` y el api habría entrado en bucle de reinicios. | Lo detectó `code-reviewer` antes del primer `apply`. Se declararon los dominios con constantes compartidas. |
 | 04 | La primera configuración tenía detalles incorrectos: `engines` de Node incompatible con ESLint 10, `lint` sin `--max-warnings 0`, Postgres expuesto en toda la red local, `esModuleInterop` redundante. | Lo detectó `code-reviewer` y se corrigió. |

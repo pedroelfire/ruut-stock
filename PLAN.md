@@ -356,14 +356,22 @@ Avisos que dejó la revisión de la Fase 1, y cómo se resolvieron:
 
 **Hecho cuando:** desde una ventana de incógnito se puede registrar un usuario nuevo y usar la app completa en producción, y `GET <api>/health` responde 200.
 
+> ✅ Verificado el 2026-11-22 en producción:
+> - `GET https://ruut-stock-api.up.railway.app/health` responde 200, y el api sin token responde 401.
+> - En la web, `/login` da 200 y `/` sin sesión redirige a login.
+> - El login demo da 200 y el registro de un usuario nuevo da 201.
+> - Búsqueda, alta y baja en la watchlist, quote, serie 1M y detalle `/stocks/NVDA`, todo con datos reales.
+> - La web llega al api por la red privada (`api.railway.internal:4000`).
+> - Sin verificar: la última entrada de `X-Forwarded-For` que pone el edge.
+
 ### Fase 6: README, prompts y cierre (~20 min)
 
 **Objetivo:** que el repo cuente la historia del desarrollo.
 
-- [ ] README: qué se construyó y para quién, cómo correrlo localmente, diagrama de arquitectura, decisiones y trade-offs (BFF, caché en memoria, Railway Postgres en vez de Supabase, Lightweight Charts), tiempo invertido por fase, qué se dejó fuera y qué haría con más tiempo.
-- [ ] URLs públicas y credenciales del usuario demo.
-- [ ] `prompts/README.md`: herramientas y modelos usados, flujo de trabajo, **dónde se equivocó la IA y qué se corrigió a mano**.
-- [ ] Revisar que no haya secretos en `prompts/` ni en el historial de git.
+- [x] README: qué se construyó y para quién, cómo correrlo localmente, diagrama de arquitectura, decisiones y trade-offs (BFF, caché en memoria, Railway Postgres en vez de Supabase, Lightweight Charts), tiempo invertido por fase, qué se dejó fuera y qué haría con más tiempo.
+- [x] URLs públicas y acceso: registro abierto y botón "Use demo account". La contraseña demo no se publica en el repo.
+- [x] `prompts/README.md`: herramientas y modelos usados, flujo de trabajo, **dónde se equivocó la IA y qué se corrigió a mano**.
+- [x] Revisar que no haya secretos en `prompts/` ni en el historial de git.
 - [ ] Ensayar el walkthrough de la entrevista y preparar ideas para "un cambio pequeño en vivo".
 
 ---
