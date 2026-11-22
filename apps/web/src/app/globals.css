@@ -89,6 +89,17 @@
   }
 }
 
+/*
+ * TradingView attribution (license requirement: it stays visible and in place). The library picks
+ * the logo colors from the axis text color, which in dark mode gives a dark logo on a dark chart.
+ * Same pairs as the library's own light and dark variants, taken from the tokens. Unlayered on
+ * purpose: the library injects its own unlayered style, which would beat any utility.
+ */
+[data-slot='price-chart'] a#tv-attr-logo {
+  --fill: var(--foreground);
+  --stroke: var(--background);
+}
+
 /* §9: no entrance animations or transitions for users who ask for reduced motion. */
 @media (prefers-reduced-motion: reduce) {
   *,

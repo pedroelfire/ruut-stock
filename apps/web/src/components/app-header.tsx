@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
-import { SearchTrigger } from '@/components/search-trigger';
+import { SymbolSearch } from '@/components/symbol-search';
 import { UserMenu } from '@/components/user-menu';
 
 export function AppHeader({ email }: { email: string }) {
@@ -20,7 +20,7 @@ export function AppHeader({ email }: { email: string }) {
           <Logo />
         </Link>
         <div className="flex flex-1 justify-end md:justify-center">
-          <SearchTrigger />
+          <SymbolSearch />
         </div>
         <UserMenu email={email} />
       </div>

@@ -8,7 +8,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        // The ring has the fill's color: the offset separates them (conventions §9).
+        default:
+          'bg-primary text-primary-foreground ring-offset-background hover:bg-primary/90 focus-visible:ring-offset-2',
         destructive: 'bg-destructive text-background hover:bg-destructive/90',
         outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',

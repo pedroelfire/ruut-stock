@@ -47,7 +47,7 @@ Reglas:
 ## 3. Tipografía
 
 - Fuente: **Inter** (vía `next/font`), con `system-ui` como fallback.
-- **Todas las cifras** (precios, variaciones, volumen, ejes) con `tabular-nums`, para que no "bailen" al actualizarse.
+- **Todas las cifras** (precios, variaciones, volumen) con `tabular-nums`, para que no "bailen" al actualizarse. Excepción: los ejes del gráfico, que la librería dibuja en canvas y no admiten esa propiedad.
 - Ticker (`AAPL`): `font-semibold`, mayúsculas, `tracking-tight`.
 
 | Rol | Clase Tailwind |
@@ -93,6 +93,9 @@ Reglas:
 ### Dashboard (watchlist)
 
 - Escritorio (`md` y superior): tabla con columnas **Symbol · Name · Price · Change · Trend · 1M (sparkline) · acciones (sin título)**. Las cifras se alinean a la derecha.
+  - **Change:** variación absoluta del día con signo (`+2.31`).
+  - **Trend:** variación % del día con signo y flecha (`↗ +1.24%`).
+  - **1M:** sparkline del último mes.
 - Móvil: lista de tarjetas (ticker y nombre a la izquierda; precio y variación a la derecha; sparkline debajo).
 - Toda la fila o tarjeta es clicable y lleva al detalle.
 
@@ -119,8 +122,8 @@ Orden vertical fijo:
 |---|---|
 | Cargando | Skeleton con la forma del contenido final (nunca un spinner a pantalla completa) |
 | Vacío | Icono sencillo, una frase y una acción: "Your watchlist is empty" · "Search for a stock to add it to your watchlist." · botón `Search stocks` |
-| Error | Mensaje en lenguaje humano, sin códigos técnicos, con botón `Try again`: "We couldn't load your watchlist" · "Check your connection and try again." |
-| Límite de API alcanzado | Banner con fondo `--warning-subtle`, borde, icono y texto en `--warning`: "Data limit reached" · "Showing the last saved prices. Retrying in 42 s." Si hay datos en caché, se muestran con el badge `Stale` |
+| Error | Mensaje en lenguaje humano, sin códigos técnicos, con botón `Try again`. Watchlist: "We couldn't load your watchlist" · "Check your connection and try again." Detalle: "We couldn't load {SYMBOL}" · "Market data is unavailable right now. Try again in a moment." Gráfico: "We couldn't load the chart", con la descripción por defecto |
+| Límite de API alcanzado | Banner con fondo `--warning-subtle`, borde, icono y texto en `--warning`. Con datos en caché: "Data limit reached" · "Showing the last saved prices. Retrying in 42 s.", y los datos se muestran con el badge `Stale`. Sin datos guardados: "Data limit reached" · "No saved prices yet. Retrying in 42 s." |
 | Dato con retraso | Badge discreto `Delayed · 15 min` junto a la hora del último dato |
 | Sin resultados de búsqueda | "No results for "xyz"" · "Try the ticker symbol, like AAPL." |
 
@@ -149,7 +152,7 @@ El signo negativo es el carácter `−` (U+2212), no un guion.
 ## 9. Accesibilidad
 
 - Contraste AA: 4.5:1 para texto normal y 3:1 para texto grande y elementos gráficos.
-- Foco visible en todo elemento interactivo (`focus-visible:ring-2 ring-ring`).
+- Foco visible en todo elemento interactivo (`focus-visible:ring-2 ring-ring`). En los controles rellenos con `--primary` (botón primario, segmento activo del selector de rango) se añade `ring-offset-2 ring-offset-background`, porque el anillo tiene el mismo color que el fondo del control.
 - Las áreas táctiles miden 40 × 40 px como mínimo. Excepción: los enlaces en línea dentro de un párrafo (WCAG 2.5.8).
 - Respetar `prefers-reduced-motion`: sin animaciones de entrada ni transiciones del gráfico.
 - Los gráficos llevan un resumen accesible (`aria-label` con el rango, el valor inicial, el final y la variación).
@@ -160,4 +163,5 @@ El signo negativo es el carácter `−` (U+2212), no un guion.
 - Idioma de la UI: **inglés, 100 %** (decisión confirmada). Ningún texto visible, `aria-label`, `title`, `alt` ni mensaje de error en otro idioma. Locale de formato: `en-US`.
 - Tono directo y sin jerga.
 - Botones con verbo: "Add to watchlist", "Try again".
+- Comillas y apóstrofos rectos en todo el copy (`No results for "xyz"`, `couldn't`). Excepción: el formato de fecha del eje en 1Y (`Nov ’26`, §8).
 - No se usan mayúsculas sostenidas salvo en tickers.

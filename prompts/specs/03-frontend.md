@@ -70,21 +70,25 @@ Riesgo aceptado: `GET /api/auth/expired` permite cerrar la sesión de otro usuar
 
 ### Dashboard (`/`)
 
-- Cabecera con el título `Watchlist`, el texto "N symbols · Updated HH:MM ET", el badge de retraso si algún quote trae `delayMinutes > 0`, y el botón `Add symbol`, que enfoca el buscador.
-- Escritorio: tabla. Móvil: tarjetas (§5 de las convenciones). Toda la fila o tarjeta navega al detalle; el botón de quitar no propaga el clic.
+- Cabecera con el título `Watchlist`, el texto "N symbols · Updated HH:MM ET" (la hora es el `dataUpdatedAt` de la query), el badge de retraso si algún quote trae `delayMinutes > 0`, y el botón `Add symbol`, que **abre** el buscador de la cabecera (contexto `SymbolSearchProvider`; en escritorio, el popover bajo el trigger).
+- Escritorio: tabla (`watchlist-table`). Columnas: `Change` es la variación absoluta con signo y `Trend` la variación en % con flecha. Móvil: tarjetas (`watchlist-card-list`, §5 de las convenciones). Las dos se renderizan y se alternan con CSS (`md:`), sin `matchMedia`, para no depender de la hidratación.
+- Toda la fila o tarjeta navega al detalle: en la tabla, el ticker es el enlace real (foco y lectores de pantalla) y el `onClick` de la fila cubre el puntero; en las tarjetas, el enlace del ticker se estira sobre la tarjeta (`after:absolute after:inset-0`). El botón de quitar no propaga el clic.
+- Lista llena (8 símbolos): se muestra "Your watchlist is full (8 symbols). Remove one to add another." y el alta se rechaza en el cliente antes de llamar al API. Si el API responde igualmente `409` por lista llena (carrera), se muestra el mismo copy.
 - Badge `Stale` por fila cuando su quote trae `stale: true`. Fila con `quote: null`: nombre y ticker visibles, y precio y variación como `—` con el texto accesible "Price unavailable".
 - **Sparklines:** se cargan después de los quotes, una petición por símbolo y como máximo 2 a la vez, con su propia query key (`['sparkline', symbol]`). Mientras cargan, skeleton. Si reciben `RATE_LIMITED` o fallan, muestran una línea plana en `--muted-foreground` y se reintentan **en silencio** con su propio `retry` (hasta 3 veces, con `retryDelay` igual a `retryAfter`). **No activan el banner global** (ver §5).
 - Estados: skeleton, vacío con las sugerencias AAPL, MSFT y NVDA, error con `Try again`, y banner de límite cuando la respuesta de la watchlist trae `meta.partial` o un `RATE_LIMITED`.
 
 ### Detalle (`/stocks/[symbol]`)
 
-- El quote se carga en el servidor (Server Component). La serie se carga en el cliente al elegir el rango.
-- El rango elegido vive en la URL (`?range=6M`), para poder compartirlo y que sobreviva al refresco. Por defecto, `1M`.
+- El quote se carga en el servidor (Server Component) y se pasa como `initialData` a `['quote', symbol]`, que sigue refrescándose en el cliente con el mismo `refetchInterval` que la watchlist. La serie se carga en el cliente al elegir el rango.
+- El rango elegido vive en la URL (`?range=6M`), para poder compartirlo y que sobreviva al refresco. Por defecto, `1M` (que no se escribe en la URL). El cambio de rango usa `history.replaceState`, que Next.js sincroniza con `useSearchParams` sin volver a renderizar la página en el servidor (no se vuelve a pedir el quote).
+- Una URL con el símbolo en minúsculas (`/stocks/aapl`) redirige a la canónica (`/stocks/AAPL`), conservando `range`. Como `loading.tsx` ya empezó el streaming, la redirección llega como meta refresh más navegación del router, no como un `307`. Un segmento que no es un ticker válido → `notFound()` sin llamar al API.
+- El botón de añadir o quitar lee la pertenencia de `['watchlist']` (comparte caché con el dashboard). Coste: si no está en caché, `GET /watchlist` pide los quotes de la lista (normalmente cacheados en el API). Si `['watchlist']` falló y no hay nada en caché, el botón se muestra deshabilitado como "Watchlist unavailable", para no ofrecer "Add to watchlist" sobre un símbolo que quizá ya está (acabaría en `409`).
 - `PriceChart` con Lightweight Charts, importado con `next/dynamic` y `ssr: false`. Se redimensiona con `ResizeObserver` y destruye el chart al desmontarse. Lleva un resumen accesible en `aria-label` ("NVDA price, 1M: from $176.20 to $189.84, +7.74%").
 - Badge `Stale` junto a la hora del dato cuando el quote o la serie traen `stale: true`.
 - Respuestas del quote en el servidor (contrato en el spec 02 §4):
   - `404` → `notFound()` ("We couldn't find "XYZ"").
-  - `429` → estado de límite alcanzado dentro de la página (banner con cuenta atrás y `Try again`), **nunca** `notFound()`.
+  - `429` → estado de límite alcanzado dentro de la página (banner con cuenta atrás y `Try again`), **nunca** `notFound()`. Al llegar a cero, `router.refresh()`.
   - `502` (falla el proveedor y no hay nada en caché) → estado de error con `Try again`, **nunca** `notFound()`.
 - Datos que llegan del API (verificado con datos reales el 2026-11-22):
   - `quote.volume` puede ser `null`.
@@ -97,8 +101,10 @@ Riesgo aceptado: `GET /api/auth/expired` permite cerrar la sesión de otro usuar
 ### Búsqueda (cabecera)
 
 - Componente `SymbolSearch` sobre el `Command` de shadcn: popover en escritorio y diálogo a pantalla completa en móvil.
+- El input limita la consulta a 32 caracteres (`maxLength={SEARCH_QUERY_MAX_LENGTH}`, el mismo tope que valida el API), para no convertir un `400` en el error genérico "Check your connection".
 - Debounce de 300 ms, con cancelación de la petición anterior (`AbortController`, a través de TanStack Query).
-- Cada resultado tiene un botón para añadirlo a la watchlist (o un check si ya está) y abre el detalle con `Enter` o con un clic.
+- Cada resultado tiene un botón para añadirlo a la watchlist (o un check si ya está) y abre el detalle con `Enter` o con un clic. El botón va **junto a** la opción, no dentro: un botón anidado en un `role="option"` no lo anuncian los lectores de pantalla. Se alcanza con `Tab`; tras pulsarlo, el foco vuelve al input.
+- `↑` `↓` recorren los resultados en bucle; `Esc` cierra y devuelve el foco al trigger. Mientras llega la respuesta se mantienen los resultados anteriores (`keepPreviousData`) o un skeleton si no hay ninguno.
 
 ## 5. Obtención de datos (TanStack Query)
 
@@ -106,18 +112,25 @@ Riesgo aceptado: `GET /api/auth/expired` permite cerrar la sesión de otro usuar
 |---|---|---|---|
 | `['search', q]` | `/api/bff/market/search?q=` | 24 h | `enabled` cuando `q` tiene 1 carácter o más |
 | `['watchlist']` | `/api/bff/watchlist` | 2 min | `refetchInterval` de 2 min si algún quote trae `isMarketOpen` y de 15 min si no (así una pestaña abierta detecta la apertura del mercado); solo con la pestaña visible |
-| `['quote', symbol]` | `/api/bff/market/quote?symbols=` | 2 min | Hidratado desde el servidor en el detalle |
+| `['quote', symbol]` | `/api/bff/market/quote?symbols=` | 2 min | Hidratado desde el servidor en el detalle (`initialData`). `refetchInterval` de 2 o 15 min según `isMarketOpen`, como la watchlist |
 | `['series', symbol, range]` | `/api/bff/market/series/:symbol?range=` | Igual al TTL del backend | Gráfico del detalle. `placeholderData` con el rango anterior para que no parpadee |
-| `['sparkline', symbol]` | `/api/bff/market/series/:symbol?range=1M` | 1 h | Key propia de las sparklines, con `meta: { silentRateLimit: true }` y su propio `retry`. El backend comparte la caché con la serie 1M |
+| `['sparkline', symbol]` | `/api/bff/market/series/:symbol?range=1M` | `Infinity` | Key propia de las sparklines, con `meta: { silentRateLimit: true }` y su propio `retry` (solo ante `RATE_LIMITED`, 5xx o red; mínimo 1 s de espera). Sin `retryOnMount`, `refetchOnWindowFocus` ni `refetchOnReconnect`. Ningún refetch por dato obsoleto (montaje, foco, reconexión o reactivación), porque los lanzaría todos a la vez y gastaría los 8 créditos/min. Se recargan a través de la ventana cuando la entrada se libera (`gcTime` tras salir del dashboard) o al recargar la página. El backend comparte la caché con la serie 1M |
 
-- **Mutaciones** (añadir o quitar de la watchlist): actualización optimista, rollback si fallan e invalidación de `['watchlist']`.
+- **Ventana de sparklines:** en el orden de la watchlist, una query arranca solo si hay menos de 2 en vuelo; una query que espera entre reintentos cuenta como en vuelo. El estado se lee de la caché de queries en cada render (`sparklineWindow`, función pura y testeada). Las queries ya resueltas mantienen su observer activo sin ocupar hueco, lo que solo es seguro porque no pueden refetchear por su cuenta (ver la fila de `['sparkline', symbol]`): la ventana es la única vía por la que arranca una petición, así que nunca hay más de 2 en vuelo. La ventana se activa con la primera carga de la watchlist (`data` definido, no `isSuccess`), para que un refetch fallido de la watchlist no la apague y la vuelva a encender.
+- **Mutaciones** (añadir o quitar de la watchlist): actualización optimista, rollback si fallan e invalidación de `['watchlist']`. El alta optimista usa el quote de `['quote', symbol]` si está en caché. Un `DELETE` que responde `404` cuenta como éxito (ya no estaba). El error se muestra junto al control que lo provocó (dashboard, buscador o detalle), con el `message` del API.
+- Solo el dashboard tiene `refetchInterval` sobre `['watchlist']`: el detalle y el buscador observan la misma entrada sin intervalo, para no duplicar el sondeo.
 - **Reintentos por defecto:** ninguno ante errores 4xx (incluido el 429); uno ante 5xx o error de red. Las sparklines son la única excepción (ver §4).
-- **429 global:** un `RateLimitProvider` escucha la caché de queries. Ante un `RATE_LIMITED` o un `meta.partial`, guarda `retryAfter` y muestra el banner con cuenta atrás. Al llegar a cero, refresca las queries activas. Ignora las queries con `meta.silentRateLimit` (sparklines).
+- **429 global:** un `RateLimitProvider` escucha la caché de queries. Ante un `RATE_LIMITED` o un `meta.partial`, guarda `retryAfter` y muestra el banner con cuenta atrás. Al llegar a cero, refresca las queries activas. Ignora las queries con `meta.silentRateLimit` (sparklines). Un `RATE_LIMITED` sin `retryAfter` cuenta 60 s; la cuenta atrás mínima es 1 s (un `retryAfter: 0` repetido no provoca un bucle). Si llega otro aviso, el plazo solo se alarga. Una vista sin datos por un `RATE_LIMITED` muestra su skeleton bajo el banner, no un error. Los errores de mutaciones no activan el banner.
 - **401 en cliente:** limpia la caché de queries y navega a `/api/auth/expired`, que borra la cookie y lleva a `/login?expired=1`.
 
 ## 6. Componentes
 
-Archivos en kebab-case dentro de `src/components/`: `app-header`, `user-menu`, `symbol-search`, `watchlist-table`, `watchlist-card-list`, `sparkline`, `price-chart`, `range-selector`, `key-metrics`, `change-indicator`, `delayed-badge`, `stale-badge`, `rate-limit-banner`, `empty-state`, `error-state` y los skeletons de cada vista. Primitivas de shadcn en `components/ui/`.
+Archivos en kebab-case dentro de `src/components/`: `app-header`, `user-menu`, `symbol-search`, `watchlist-table`, `watchlist-card-list`, `sparkline`, `price-chart`, `range-selector`, `key-metrics`, `change-indicator`, `delayed-badge`, `stale-badge`, `rate-limit-banner`, `empty-state`, `error-state` y los skeletons de cada vista (`watchlist-skeleton`, `stock-detail-skeleton`). Además: `app-providers` (QueryClient, `RateLimitProvider` y `SymbolSearchProvider`), `rate-limit-provider`, `symbol-search-context`, `watchlist-view` (contenedor del dashboard), `quote-values` (precio y variación con `—` y "Price unavailable"), `stock-detail` (cuerpo cliente del detalle), `watchlist-toggle-button`, `quote-unavailable` (429 y 502 del detalle) y `symbol-not-found`. Primitivas de shadcn en `components/ui/` (button, input, label, dropdown-menu, command, popover, dialog y skeleton).
+
+Hooks en `src/hooks/`: `use-debounce`, `use-media-query`, `use-now-seconds` (cuenta atrás), `use-watchlist-actions` y `use-sparklines`.
+
+- `sparkline` es un SVG (`polyline`) sin dependencias; Lightweight Charts solo se usa en `price-chart`.
+- `price-chart` lee los colores de los tokens CSS (`getComputedStyle`), aplica el degradado de `--primary` al 20 %, vuelve a colorearse si cambia `prefers-color-scheme`, desactiva zoom y desplazamiento, y muestra un tooltip propio (fecha y precio) que sigue al crosshair. Mantiene el logo de atribución de TradingView, que la licencia de Lightweight Charts pide.
 
 `change-indicator` aplica la regla "nunca solo color": signo con U+2212 para los negativos, flecha y color del token.
 
@@ -132,7 +145,13 @@ Locale `en-US` y zona horaria de mercado `America/New_York`.
 | `formatPercent(value)` | `+1.23%`, `−0.73%`, `0.00%` |
 | `formatVolume(value)` | `152.3M` |
 | `formatAxisDate(date, range)` | `14:30` (1D), `Nov 12` (1W a 6M), `Nov ’26` (1Y) |
+| `formatTooltipDate(date, range)` | `Nov 12, 14:30 ET` (1D, 1W), `Nov 12, 2026` (1M a 1Y) |
+| `formatMarketTime(date)` | `14:32 ET` |
 | `formatAsOf(date)` | `As of 14:32 ET` |
+
+- Los rangos diarios (`1M`, `6M`, `1Y`) traen la fecha de la sesión a las `00:00Z`: se formatean en **UTC**, porque en hora de Nueva York caerían en el día anterior. Los intradía (`1D`, `1W`) se formatean en `America/New_York`.
+- El signo y el color salen del valor redondeado a 2 decimales (`changeDirection`): `−0.004` se muestra `0.00`, sin signo y en `--muted-foreground`.
+- Reloj de 24 h (`hourCycle: 'h23'`), para que la medianoche sea `00:05` y nunca `24:05`.
 
 ## 8. Variables de entorno
 
@@ -151,4 +170,6 @@ Locale `en-US` y zona horaria de mercado `America/New_York`.
 4. `proxy.ts`: redirecciones sin cookie, con cookie vencida (`expired=1`) y con cookie vigente en `/login`.
 5. `api-client`: mapeo de errores a `ApiError`, `retryAfter` leído y respuesta que no valida.
 6. Validación de `next`: rechaza URLs externas, las que empiezan por `//` y las que contienen `\`.
-7. `SymbolSearch`: navegación con teclado (`↑` `↓` `Enter` `Esc`).
+7. `SymbolSearch`: navegación con teclado (`↑` `↓` `Enter` `Esc`), una sola petición tras el debounce, check en los símbolos que ya están y copy sin resultados.
+8. Lógica de datos: `refetchInterval` según el mercado, política de reintentos por defecto y de las sparklines, ventana de 2 sparklines, `RateLimitProvider` (banner, refetch al llegar a cero e ignorar las queries silenciosas) y 401 global.
+9. `useWatchlistActions`: alta optimista con rollback, baja optimista con `404` como éxito y lista llena sin llamar al API.

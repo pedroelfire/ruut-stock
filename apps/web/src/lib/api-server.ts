@@ -3,11 +3,9 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { z } from 'zod';
 import { ApiError, parseResponse, toApiError } from './api-error';
+import { EXPIRED_SESSION_PATH } from './session-paths';
 import { getSessionToken } from './session';
 import { UNAVAILABLE_MESSAGE, fetchUpstream, getClientIp } from './upstream';
-
-/** Clears the cookie and lands on /login?expired=1 (Server Components cannot delete cookies). */
-export const EXPIRED_SESSION_PATH = '/api/auth/expired';
 
 /**
  * GET against the API from a Server Component, with the session token as Bearer. On a 401 it
