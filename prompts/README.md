@@ -40,6 +40,7 @@ prompts/
 | 06 | [Fase 1: backend base y auth](sessions/06-phase-1-backend-auth.md) | API Express con auth JWT, Prisma 7, 41 tests, prueba de punta a punta; auditor solo al final |
 | 07 | [Fase 2: datos de mercado](sessions/07-phase-2-market-data.md) | Twelve Data, caché, presupuesto de créditos, watchlist, 174 tests, prueba con la API real |
 | 08 | [Fase 3: frontend, auth y layout](sessions/08-phase-3-frontend-auth.md) | Next 16 con BFF, cookie httpOnly, `proxy.ts`, protección CSRF, marca "Stocks", 70 tests web |
+| 09 | [Fase 4: features del producto](sessions/09-phase-4-features.md) | Buscador, watchlist, detalle con gráfico, estados de límite y error, 124 tests web |
 
 ## Dónde se equivocó la IA
 
@@ -61,4 +62,7 @@ Registro honesto de errores de la IA y de lo que se corrigió a mano o por indic
 | 07 | La búsqueda devolvía símbolos OTC poco útiles y no priorizaba la coincidencia exacta de ticker. | Lo observó la sesión principal con datos reales; se filtraron las bolsas principales de EE. UU. y se ordenaron los resultados. |
 | 06 | `backend-dev` no tuvo en cuenta que, en Express 5, el callback de `listen` también recibe el error: con el puerto ocupado registraba "API listening" y salía con 0. Tampoco cubrió con tests el camino real de email duplicado (P2002) ni exigió `exp` en el JWT. | Lo detectó `code-reviewer` y se corrigió con tests. |
 | 06 | Al editar el spec 02, `backend-dev` usó un `String.replace` que interpretó `` $` `` dentro de `$2b$` y duplicó parte del documento. | El propio agente lo detectó y lo reparó antes de entregar. |
+| 09 | La CLI de shadcn generó `import { cn } from "cn"` e instaló un paquete npm desconocido llamado `cn`. | Lo detectó `frontend-dev`: desinstaló el paquete, corrigió los imports y comprobó el lockfile. `code-reviewer` verificó que no quedaba rastro. |
+| 09 | Las sparklines respetaban el máximo de 2 a la vez solo en la primera carga: al volver al dashboard o al reconectar se refetcheaban todas de golpe (hasta 8 créditos). Además, dos altas seguidas borraban la primera fila optimista. | Lo detectó `code-reviewer` (el segundo bug salió al escribir el test que pidió). Se fijó `staleTime: Infinity` en las sparklines, con tests a nivel de hook. |
+| 09 | El aviso de límite decía "Showing the last saved prices" aunque no hubiera nada guardado, y las etiquetas del eje en 1W repetían la misma fecha. | Lo detectó `ui-ux-guardian`; el autor aprobó el copy nuevo. |
 | 04 | La primera configuración tenía detalles incorrectos: `engines` de Node incompatible con ESLint 10, `lint` sin `--max-warnings 0`, Postgres expuesto en toda la red local, `esModuleInterop` redundante. | Lo detectó `code-reviewer` y se corrigió. |

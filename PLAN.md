@@ -330,13 +330,15 @@ model WatchlistItem {
 
 **Objetivo:** la experiencia principal, pulida.
 
-- [ ] `SymbolSearch` con debounce de 300 ms y navegación con teclado.
-- [ ] Dashboard con la watchlist: precio, variación coloreada, sparkline, añadir y quitar.
-- [ ] Página `/stocks/[symbol]`: gráfico con Lightweight Charts, selector de rango y tarjetas de métricas.
-- [ ] Estados de loading (skeletons), vacío ("añade tu primera acción") y error.
-- [ ] Aviso de límite alcanzado con cuenta atrás e indicador de dato obsoleto o con retraso.
-- [ ] Responsive (móvil primero).
-- [ ] (Si sobra tiempo) Comparador normalizado y modo oscuro.
+- [x] `SymbolSearch` con debounce de 300 ms y navegación con teclado.
+- [x] Dashboard con la watchlist: precio, variación coloreada, sparkline, añadir y quitar.
+- [x] Página `/stocks/[symbol]`: gráfico con Lightweight Charts, selector de rango y tarjetas de métricas.
+- [x] Estados de loading (skeletons), vacío ("añade tu primera acción") y error.
+- [x] Aviso de límite alcanzado con cuenta atrás e indicador de dato obsoleto o con retraso.
+- [x] Responsive (móvil primero).
+- [ ] (Si sobra tiempo) Comparador normalizado y modo oscuro. No se hizo; el modo oscuro sigue `prefers-color-scheme`, sin selector.
+
+> ✅ Verificado el 2026-11-22: buscar → añadir → detalle → cambiar de rango funciona con datos reales (Edge headless, escritorio y móvil, claro y oscuro). 124 tests en web y 174 en api. Aprobado por `code-reviewer` en la ronda 2.
 
 **Hecho cuando:** el flujo buscar → añadir a la watchlist → abrir el detalle → cambiar de rango funciona de punta a punta con datos reales.
 
