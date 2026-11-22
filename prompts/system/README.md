@@ -8,7 +8,7 @@
 | [.claude/agents/backend-dev.md](../../.claude/agents/backend-dev.md) | System prompt del agente de backend (Express, Prisma, JWT, Twelve Data, caché) |
 | [.claude/agents/frontend-dev.md](../../.claude/agents/frontend-dev.md) | System prompt del agente de frontend (Next.js, BFF, gráficos, estados) |
 | [.claude/agents/code-reviewer.md](../../.claude/agents/code-reviewer.md) | System prompt del revisor que aprueba o rechaza cada commit |
-| [.claude/agents/auditor.md](../../.claude/agents/auditor.md) | System prompt del auditor que revisa cada fase completa |
+| [.claude/agents/auditor.md](../../.claude/agents/auditor.md) | System prompt del auditor que revisa el proyecto completo al terminar todas las fases |
 | [.claude/agents/ui-ux-guardian.md](../../.claude/agents/ui-ux-guardian.md) | System prompt del guardián de las convenciones de UI/UX |
 | [docs/ui-ux-conventions.md](../../docs/ui-ux-conventions.md) | Convenciones visuales que hace cumplir `ui-ux-guardian` |
 

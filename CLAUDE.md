@@ -12,7 +12,7 @@ App de datos y visualización de acciones (prueba técnica RUUT). El plan comple
 ## Idioma
 
 - **Todo el código y la interfaz van 100 % en inglés:** identificadores, comentarios, textos de la UI, mensajes de error del API, logs, nombres de tests, nombres de ramas y mensajes de commit.
-- **Los archivos `.md` se escriben en español** (documentación, specs, informes de auditoría, sesiones de `prompts/` y también el `README.md` raíz).
+- **Los archivos `.md` se escriben en español** (documentación, specs, sesiones de `prompts/` y también el `README.md` raíz).
 
 ## Contexto fijo
 
@@ -31,14 +31,14 @@ App de datos y visualización de acciones (prueba técnica RUUT). El plan comple
 | `frontend-dev` | Implementar o cambiar cualquier cosa en `apps/web` | Sí |
 | `ui-ux-guardian` | Después de cualquier cambio visual en `apps/web`, o para actualizar las convenciones de UI | Solo la capa de presentación de `apps/web` y `docs/ui-ux-conventions.md` |
 | `code-reviewer` | Antes de cada commit o PR, sobre el diff | No (solo lee y emite un veredicto) |
-| `auditor` | Al terminar una feature grande (cada fase de PLAN.md) | No (solo escribe su informe en `docs/audits/`) |
+| `auditor` | Una sola vez, cuando todas las fases de PLAN.md están completas (antes de la entrega) | No (devuelve su informe en la respuesta, sin escribir archivos) |
 
 ### Flujo de trabajo
 
 1. La sesión principal descompone la tarea y delega en `backend-dev` y/o `frontend-dev`. Si los dos lados se tocan, el contrato (esquema Zod en `packages/shared`) se define primero, en `backend-dev`.
 2. Si hubo cambios visuales, se pasa a `ui-ux-guardian`.
 3. `code-reviewer` revisa el diff. Con veredicto **CAMBIOS REQUERIDOS**, el agente desarrollador corrige y se vuelve a revisar. Solo se hace commit con **APROBADO**.
-4. Al cerrar una feature grande, se ejecuta `auditor`. Sus hallazgos críticos se convierten en tareas antes de seguir con la siguiente fase.
+4. Cuando una fase pasa el `code-reviewer`, se registra, se commitea y se sigue con la siguiente fase sin auditoría intermedia. `auditor` se ejecuta solo al completar todas las fases; sus hallazgos críticos se convierten en tareas antes de entregar.
 5. La sesión principal registra la sesión en `prompts/sessions/` (ver más abajo) y hace el commit.
 
 Los subagentes no pueden lanzar otros subagentes: la orquestación siempre la hace la sesión principal. Las fases de PLAN.md empiezan solo con luz verde explícita del usuario.
