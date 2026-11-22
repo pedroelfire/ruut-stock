@@ -39,6 +39,7 @@ prompts/
 | 05 | [Ajustes: README, token y secretos](sessions/05-readme-token-secrets.md) | README en español, `--warning-subtle`, secretos movidos a archivos `.env` ignorados |
 | 06 | [Fase 1: backend base y auth](sessions/06-phase-1-backend-auth.md) | API Express con auth JWT, Prisma 7, 41 tests, prueba de punta a punta; auditor solo al final |
 | 07 | [Fase 2: datos de mercado](sessions/07-phase-2-market-data.md) | Twelve Data, caché, presupuesto de créditos, watchlist, 174 tests, prueba con la API real |
+| 08 | [Fase 3: frontend, auth y layout](sessions/08-phase-3-frontend-auth.md) | Next 16 con BFF, cookie httpOnly, `proxy.ts`, protección CSRF, marca "Stocks", 70 tests web |
 
 ## Dónde se equivocó la IA
 
@@ -52,6 +53,9 @@ Registro honesto de errores de la IA y de lo que se corrigió a mano o por indic
 | 04 | Los primeros specs no cuadraban con el límite de créditos: watchlist de 10 símbolos frente a 8 créditos por minuto, y quotes "en lote" contados como una sola llamada. | Lo detectó `code-reviewer`. Se pasó a un máximo de 8 símbolos y reserva parcial de créditos. |
 | 04 | El rate limit por IP no tenía en cuenta que, detrás del BFF, todas las peticiones llegan desde el servidor de Next. | Lo detectó `code-reviewer`. El BFF reenvía la IP real y los límites usan email + IP. |
 | 04 | Huecos de contrato: `name` sin persistir, `stale` global en lugar de por dato, quote sin distinguir "no existe" de "sin créditos", posible bucle de redirección con una cookie rechazada. | Lo detectó `code-reviewer` en dos rondas; los specs se corrigieron antes de escribir código. |
+| 08 | `frontend-dev` dejó los POST de auth sin comprobar el origen. Además, la pasarela siempre reenviaba `application/json`, así que un formulario `text/plain` de otro sitio podía iniciar sesión (login CSRF). | Lo detectó `code-reviewer` y lo reprodujo en local. Se añadió `lib/same-origin.ts` y la exigencia de JSON, con tests. |
+| 08 | `frontend-dev` inventó la marca "Ruut Stocks" porque no pudo ver el mockup, y dejó los componentes de shadcn con foco débil, controles de 36 px y sombras fuera de la convención. | `ui-ux-guardian` lo corrigió. El autor eligió el nombre "Stocks". |
+| 08 | Las convenciones de la sesión 01 tenían dos contrastes que no cumplían AA: el texto del aviso sobre su fondo (4.50:1) y el borde de los inputs (1.2:1). | Lo detectó `ui-ux-guardian`. El autor aprobó `#FBF4EF` y el token `--input`. |
 | 07 | Esquemas del proveedor demasiado estrictos (`.optional()` rechaza `null`) y una sola fila mala tumbaba la búsqueda entera. Escritos sin datos reales, porque la key era inválida. | Lo detectó `code-reviewer`: validación tolerante y descarte de filas inválidas, comprobado después con datos reales. |
 | 07 | Al añadir el reembolso de créditos, `backend-dev` devolvía también los de respuestas 2xx que el proveedor sí cobró, lo que permitía superar el tope de 8 por minuto. | Lo detectó `code-reviewer` en la ronda 2: solo se reembolsa cuando no se sirvieron datos. |
 | 07 | La búsqueda devolvía símbolos OTC poco útiles y no priorizaba la coincidencia exacta de ticker. | Lo observó la sesión principal con datos reales; se filtraron las bolsas principales de EE. UU. y se ordenaron los resultados. |
